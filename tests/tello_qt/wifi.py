@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import subprocess
 import time
@@ -74,6 +74,6 @@ if __name__ == '__main__':
     print('device name = %s' % device_name())
     print('status = %s' % status())
     while True:
-        wait()
-	if status() == 'active':
-            print('connected to %s' % ssid())
+         wait()
+	# if status() == 'active':
+         print('connected to %s' % ssid())
