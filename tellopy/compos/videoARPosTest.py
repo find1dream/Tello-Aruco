@@ -5,12 +5,12 @@ import numpy as np
 from math import *
 
 aruco = cv2.aruco
-dictionary = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
+dictionary = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
 parameters =  aruco.DetectorParameters_create()
 parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
 
-board = aruco.GridBoard_create(2, 3, 0.04, 0.01, dictionary) 
-arucoMarkerLength = 0.0485
+board = aruco.GridBoard_create(5, 7, 0.033, 0.003, dictionary) 
+arucoMarkerLength = 0.033
 PI = 3.1415
 
 class AR():

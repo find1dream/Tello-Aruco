@@ -28,7 +28,7 @@ def main():
                 if i>300: #skip first 300 frames
                     if i%4==0: #do only 1/4 frames
                         im = numpy.array(frame.to_image())
-                        im = cv2.resize(im, (320,240)) #resize frame
+                        #im = cv2.resize(im, (320,240)) #resize frame
                         image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                         cv2.imshow('Original', image)
                         #cv2.imshow('Canny', cv2.Canny(image, 100, 200))
