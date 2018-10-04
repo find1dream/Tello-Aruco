@@ -31,52 +31,52 @@ def recv_thread():
     drone.connect()
     drone.wait_for_connection(60.0)
     drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
-    drone.set_video_encoder_rate(1)
+    drone.set_video_encoder_rate(4)
     drone.set_loglevel(drone.LOG_WARN)
     container = av.open(drone.get_video_stream())
     run_recv_thread = True
     while run_recv_thread:
-        print("haha")
+        print("debug: ready to receive video frames...")
         for f in container.decode(video=0):
             frameA = f
         time.sleep(0.01)
 
-def task(v):
-    getLogger().info("%s start", v)
-    time.sleep(1.0)
-    getLogger().info("%s end", v)
-
 def main():
     try:
-       
+        frameCount = 0
         threading.Thread(target = recv_thread).start()
-        i = 0
-        frameB = None
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.1)
-                print("debug: wait for video msg...")
+                print("debug: waiting for video frames...")
             else:
-                #time.sleep(0.1)
-                #print(frameA)
-            #    if i%4 == 0:
-                im = numpy.array(frameA.to_image())
-                #im = cv2.resize(im, (320,240)) #resize frame
+                #---------show frame start-------------------------------#
+                frameCount += 1
+                frame = frameA
+                im = numpy.array(frame.to_image())
                 image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                 cv2.imshow('Original', image)
-                cv2.waitKey(10)
-                print("debug: got frame")
-#            i = 0
-#            for frame in container.decode(video=0):
-#                print(i)
-#                i=i+1
-#                if i>300: #skip first 300 frames
-#                    if i%4==0: #do only 1/4 frames
-#                        im = numpy.array(frame.to_image())
-#                        #im = cv2.resize(im, (320,240)) #resize frame
-#                        image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-#                        cv2.imshow('Original', image)
-#                        #cv2.imshow('Canny', cv2.Canny(image, 100, 200))
+                if cv2.waitKey(10) & 0xFF == ord('t'):
+                    cv2.imwrite (str(frameCount) + ".png", image)
+                #---------show frame end---------------------------------#
+                #print("debug: got frame")
+
+    except Exception as ex:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+        print(ex)
+    finally:
+        drone.quit()
+        cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+#  useful code
 #                        if cv2.waitKey(30) == 27:
 #                            name = str(i) + ".png"
 #                            cv2.imwrite(name,image)
@@ -92,13 +92,7 @@ def main():
  #               cv2.waitKey(1)
  #               frame_skip = int((time.time() - start_time)/frame.time_base)
 
-    except Exception as ex:
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        traceback.print_exception(exc_type, exc_value, exc_traceback)
-        print(ex)
-    finally:
-        drone.quit()
-        cv2.destroyAllWindows()
-
-if __name__ == '__main__':
-    main()
+#   def task(v):
+#       getLogger().info("%s start", v)
+#       time.sleep(1.0)
+#       getLogger().info("%s end", v)
