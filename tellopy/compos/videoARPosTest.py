@@ -3,24 +3,64 @@ import cv2
 import sys
 import numpy as np
 from math import *
-
+import traceback
+import tellopy
+import av
+import time
+import threading
 aruco = cv2.aruco
 dictionary = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
 parameters =  aruco.DetectorParameters_create()
 parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
 
-board = aruco.GridBoard_create(5, 7, 0.033, 0.003, dictionary) 
+board = aruco.GridBoard_create(5, 7, 0.033, 0.0035, dictionary) 
 arucoMarkerLength = 0.033
 PI = 3.1415
 
+frameA = None
+run_recv_thread = True
+
+def handler(event, sender, data, **args):
+    drone = sender
+    if event is drone.EVENT_FLIGHT_DATA:
+        print(data)
+
+def init_logger():
+    handler = StreamHandler()
+    handler.setLevel(INFO)
+    handler.setFormatter(Formatter("[%(asctime)s] [%(threadName)s] %(message)s"))
+    logger = getLogger()
+    logger.addHandler(handler)
+    logger.setLevel(INFO)
+
+def recv_thread():
+    global frameA
+    global run_recv_thread
+    global drone
+    print('start recv_thread()')
+    drone = tellopy.Tello()
+    drone.connect()
+    drone.wait_for_connection(60.0)
+    drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
+    drone.set_video_encoder_rate(4)
+    drone.set_loglevel(drone.LOG_WARN)
+    container = av.open(drone.get_video_stream())
+    run_recv_thread = True
+    while run_recv_thread:
+        print("debug: ready to receive video frames...")
+        for f in container.decode(video=0):
+            frameA = f
+        time.sleep(0.01)
+
+
+
 class AR():
     def __init__(self):
-        self.cap = cv2.VideoCapture(1)
         self.cameraMatrix = np.load('mtx.npy')
         self.distanceCoefficients = np.load('dist.npy')
 
-    def findARMarker(self):
-        self.ret, self.frame = self.cap.read()
+    def findARMarker(self,frame):
+        self.frame =  frame
         #Height, Width = frame.shape[:2]
         if len(self.frame.shape) == 3:
             self.Height, self.Width, self.channels = self.frame.shape[:3]
@@ -83,18 +123,41 @@ class AR():
     def getExistMarker(self):
         return len(self.corners)
 
-    def release(self):
-        self.cap.release()
         
-if __name__ == '__main__':
 
-    myCap = AR()
-    while True:
-        myCap.findARMarker()
-        myCap.estimatePos()
-        #$print(myCap.getARPoint2())
-        myCap.show()
-        if cv2.waitKey(1) > 0:
-            myCap.release()
-            cv2.destroyAllWindows()
-            break
+def main():
+    try:
+        myCap = AR()
+        frameCount = 0
+        threading.Thread(target = recv_thread).start()
+        while run_recv_thread:
+            if frameA is None :
+                time.sleep(0.1)
+                print("debug: waiting for video frames...")
+            else:
+                #---------show frame start-------------------------------#
+                frameCount += 1
+                frame = frameA
+                im = np.array(frame.to_image())
+                image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+                #cv2.imshow('Original', image)
+                myCap.findARMarker(image)
+                myCap.estimatePos()
+                #$print(myCap.getARPoint2())
+                myCap.show()
+                if cv2.waitKey(10) & 0xFF == ord('t'):
+                    cv2.imwrite (str(frameCount) + ".png", image)
+                #---------show frame end---------------------------------#
+                #print("debug: got frame")
+
+    except Exception as ex:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+        print(ex)
+    finally:
+        drone.quit()
+        cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    main()
