@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import cv2
+import math
 import sys
 import numpy as np
 from math import *
@@ -8,6 +9,10 @@ import tellopy
 import av
 import time
 import threading
+from multiprocessing  import Process
+from collections import deque
+import socket
+
 aruco = cv2.aruco
 dictionary = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
 parameters =  aruco.DetectorParameters_create()
@@ -19,6 +24,10 @@ PI = 3.1415
 
 frameA = None
 run_recv_thread = True
+
+udp_ip = "127.0.0.1"
+udp_port = 5555
+clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def handler(event, sender, data, **args):
     drone = sender
@@ -54,8 +63,9 @@ def recv_thread():
 
 
 
-class AR():
+class DroneReg():
     def __init__(self):
+        self.worldPos = None
         self.cameraMatrix = np.load('mtx.npy')
         self.distanceCoefficients = np.load('dist.npy')
 
@@ -109,7 +119,13 @@ class AR():
     def estimatePos(self):
         if len(self.corners) > 0:
             self.retval, self.rvec, self.tvec = aruco.estimatePoseBoard(self.corners, self.ids, board, self.cameraMatrix, self.distanceCoefficients)
-            #print(self.rvec)
+            #self.revc_vec ,_ = cv2.Rodrigues(self.rvec)
+            #self.revc_inv 
+            self.dst, jacobian = cv2.Rodrigues(self.rvec)
+            self.revc_trs = cv2.transpose(self.dst)
+            self.worldPos = - self.revc_trs * self.tvec
+            self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
+ #           print("X: ",self.worldPos[0],"Y: ", self.worldPos[1], "Z: ", self.worldPos[2])
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
@@ -123,17 +139,41 @@ class AR():
     def getExistMarker(self):
         return len(self.corners)
 
-        
+
+
+def showCamPos_thread():
+    global ax
+    global posQueue
+    global DroneVideo
+    
+    plt.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection = '3d')
+    posQueue = deque([[0.0,0.0,0.0]])
+    while True:
+        y = 0
+        print("why............")
+        if DroneVideo.worldPos is not None:
+            posQueue.append(DroneVideo.worldPos)
+            print(posQueue)
+            if len(posQueue) > 10:
+                posQueue.popleft()
+                ax.plot([posQueue[i][0] for i in range(0,10)],\
+                        [posQueue[i][1] for i in range(0,10)],\
+                        [posQueue[i][2] for i in range(0,10)])
+                plt.draw()
+                plt.pause(0.1)
+                ax.cla()
 
 def main():
     try:
-        myCap = AR()
+        DroneVideo = DroneReg()
         frameCount = 0
         threading.Thread(target = recv_thread).start()
+        #threading.Thread(target = showCamPos_thread).start()
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.1)
-                print("debug: waiting for video frames...")
             else:
                 #---------show frame start-------------------------------#
                 frameCount += 1
@@ -141,12 +181,16 @@ def main():
                 im = np.array(frame.to_image())
                 image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                 #cv2.imshow('Original', image)
-                myCap.findARMarker(image)
-                myCap.estimatePos()
-                #$print(myCap.getARPoint2())
-                myCap.show()
+                DroneVideo.findARMarker(image)
+                DroneVideo.estimatePos()
+                #$print(DroneVideo.getARPoint2())
+                DroneVideo.show()
                 if cv2.waitKey(10) & 0xFF == ord('t'):
                     cv2.imwrite (str(frameCount) + ".png", image)
+                if DroneVideo.worldPos is not None:
+                    messageToUdp = DroneVideo.worldPos
+                    messageToUdp = " ".join(str(x) for x in messageToUdp)
+                    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
                 #---------show frame end---------------------------------#
                 #print("debug: got frame")
 
