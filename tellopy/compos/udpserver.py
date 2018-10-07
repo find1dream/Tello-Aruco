@@ -19,13 +19,13 @@ while True:
     data = data.decode()
     data = [float(m) for m in data.split()]
     posQueue.append(data)
-    print(posQueue)
+    #print(posQueue)
     if len(posQueue) > 10:
         posQueue.popleft()
         ax.plot([posQueue[i][0]*100 for i in range(0,10)],\
                         [posQueue[i][1]*100 for i in range(0,10)],\
                         [posQueue[i][2]*100 for i in range(0,10)])
         plt.draw()
-        plt.pause(0.1)
+        plt.pause(0.05)
         ax.cla()
-    print("messages: ", data)
+    #print("messages: ", data)
