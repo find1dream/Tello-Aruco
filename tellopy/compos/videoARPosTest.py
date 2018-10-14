@@ -174,7 +174,7 @@ def showCamPos_thread():
   #              ax.plot([posQueue[i][0] for i in range(0,10)],\
   #                      [posQueue[i][1] for i in range(0,10)],\
   #                      [posQueue[i][2] for i in range(0,10)])
-  #              plt.draw()
+  #              plt.draw()  1
   #              plt.pause(0.1)
   #              ax.cla()
 
