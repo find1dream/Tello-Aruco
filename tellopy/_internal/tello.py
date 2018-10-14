@@ -531,6 +531,9 @@ class Tello(object):
 
         return True
 
+    def recv_height_data(self):
+        pass
+
     def recv_file_data(self, data):
         (filenum,chunk,fragment,size) = struct.unpack('<HLLH', data[0:12])
         file = self.file_recv.get(filenum, None)

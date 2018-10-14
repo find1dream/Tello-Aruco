@@ -188,7 +188,7 @@ class FlightData(object):
 
     def __str__(self):
         return (
-            ("ALT: %2d" % self.height) +
+            ("HGT: %2d" % self.height) +
             (" | SPD: %2d" % self.ground_speed) +
             (" | BAT: %2d" % self.battery_percentage) +
             (" | WIFI: %2d" % self.wifi_strength) +

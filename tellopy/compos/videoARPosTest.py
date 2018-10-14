@@ -41,6 +41,7 @@ posQueue = deque([[0.0,0.0,0.0]])
 def handler(event, sender, data, **args):
     drone = sender
     if event is drone.EVENT_FLIGHT_DATA:
+        #print("event is coming")
         print(data)
 
 def init_logger():
@@ -77,35 +78,12 @@ class DroneReg():
     def show(self):
         cv2.imshow("result", self.frame)
 
-    def getARPoint(self):
-        num = self.getExistMarker()
-        if num > 0:
-            square_points = np.reshape(np.array(self.corners), (4*num, -1))
-            G = np.mean(square_points, axis = 0)
-            cv2.circle(self.frame, (int(G[0]), int(G[1])), 10, (255, 255, 255), 5)
-            x = self.halfHeight - G[0]
-            y = G[1] - self.halfWidth
-            return x, y
-
-    #AR2つのそれぞれの座標が欲しい場合
-    def getARPoint2(self):
-        if len(self.corners) >= 2:
-            square_points = np.reshape(np.array(self.corners), (4, -1))
-            G = np.mean(square_points, axis = 0)
-            cv2.circle(self.frame, (int(G[0]), int(G[1])), 10, (255, 255, 255), 5)
-            x0 = self.halfHeight - G[0]
-            y0 = G[1] - self.halfWidth
-            x1 = self.halfHeight - G[2]
-            y1 = G[3] - self.halfWidth
-            return (x0, y0, x1, y1)
-
     def getDistance(self):
         if len(self.corners) > 0:
             self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners, arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             G = np.mean(self.tvec, axis = 0)
             return G[0][2]
 
-            #ARそれぞれの距離が欲しかったらこっち
             #return self.tvec[0][0][2], self.tvec[1][0][2]
     def estimatePos(self):
         if len(self.corners) > 0:
@@ -152,36 +130,17 @@ def recv_thread():
                 messageToUdp = DroneVideo.worldPos
                 messageToUdp = " ".join(str(x) for x in messageToUdp)
                 clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
-        time.sleep(0.01)
+        time.sleep(0.005)
 
 def showCamPos_thread():
     global ax
     global posQueue
     global DroneVideo
     
-  #  plt.ion()
-  #  fig = plt.figure()
-  #  ax = fig.add_subplot(111, projection = '3d')
-  #  posQueue = deque([[0.0,0.0,0.0]])
-  #  while True:
-  #      y = 0
-  #      print("why............")
-  #      if DroneVideo.worldPos is not None:
-  #          posQueue.append(DroneVideo.worldPos)
-  #          print(posQueue)
-  #          if len(posQueue) > 10:
-  #              posQueue.popleft()
-  #              ax.plot([posQueue[i][0] for i in range(0,10)],\
-  #                      [posQueue[i][1] for i in range(0,10)],\
-  #                      [posQueue[i][2] for i in range(0,10)])
-  #              plt.draw()  1
-  #              plt.pause(0.1)
-  #              ax.cla()
-
 
 def main():
     try:
-        
+       # flightData = tellopy.FlightData()
         frameCount = 0
         threading.Thread(target = recv_thread).start()
         #threading.Thread(target = showCamPos_thread).start()
