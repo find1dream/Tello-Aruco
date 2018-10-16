@@ -15,13 +15,13 @@ import socket
 
 
 aruco = cv2.aruco
-dictionary = aruco.getPredefinedDictionary(aruco.DICT_6X6_1000)
+dictionary = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
 parameters =  aruco.DetectorParameters_create()
 parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
 
 drone = tellopy.Tello()
-board = aruco.GridBoard_create(8, 8 ,0.1515, 0.0585, dictionary) 
-arucoMarkerLength = 0.1515
+board = aruco.GridBoard_create(4, 4, 0.15, 0.06, dictionary) 
+arucoMarkerLength = 0.033
 PI = 3.1415
 
 frameA = None
@@ -41,7 +41,6 @@ posQueue = deque([[0.0,0.0,0.0]])
 def handler(event, sender, data, **args):
     drone = sender
     if event is drone.EVENT_FLIGHT_DATA:
-        #print("event is coming")
         print(data)
 
 def init_logger():
@@ -78,17 +77,39 @@ class DroneReg():
     def show(self):
         cv2.imshow("result", self.frame)
 
+    def getARPoint(self):
+        num = self.getExistMarker()
+        if num > 0:
+            square_points = np.reshape(np.array(self.corners), (4*num, -1))
+            G = np.mean(square_points, axis = 0)
+            cv2.circle(self.frame, (int(G[0]), int(G[1])), 10, (255, 255, 255), 5)
+            x = self.halfHeight - G[0]
+            y = G[1] - self.halfWidth
+            return x, y
+
+    #AR2つのそれぞれの座標が欲しい場合
+    def getARPoint2(self):
+        if len(self.corners) >= 2:
+            square_points = np.reshape(np.array(self.corners), (4, -1))
+            G = np.mean(square_points, axis = 0)
+            cv2.circle(self.frame, (int(G[0]), int(G[1])), 10, (255, 255, 255), 5)
+            x0 = self.halfHeight - G[0]
+            y0 = G[1] - self.halfWidth
+            x1 = self.halfHeight - G[2]
+            y1 = G[3] - self.halfWidth
+            return (x0, y0, x1, y1)
+
     def getDistance(self):
         if len(self.corners) > 0:
             self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners, arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             G = np.mean(self.tvec, axis = 0)
             return G[0][2]
 
+            #ARそれぞれの距離が欲しかったらこっち
             #return self.tvec[0][0][2], self.tvec[1][0][2]
     def estimatePos(self):
         if len(self.corners) > 0:
             self.retval, self.rvec, self.tvec = aruco.estimatePoseBoard(self.corners, self.ids, board, self.cameraMatrix, self.distanceCoefficients)
-            print(self.rvec)
             #self.revc_vec ,_ = cv2.Rodrigues(self.rvec)
             #self.revc_inv 
             self.dst, jacobian = cv2.Rodrigues(self.rvec)
@@ -131,17 +152,36 @@ def recv_thread():
                 messageToUdp = DroneVideo.worldPos
                 messageToUdp = " ".join(str(x) for x in messageToUdp)
                 clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
-        time.sleep(0.005)
+        time.sleep(0.01)
 
 def showCamPos_thread():
     global ax
     global posQueue
     global DroneVideo
     
+  #  plt.ion()
+  #  fig = plt.figure()
+  #  ax = fig.add_subplot(111, projection = '3d')
+  #  posQueue = deque([[0.0,0.0,0.0]])
+  #  while True:
+  #      y = 0
+  #      print("why............")
+  #      if DroneVideo.worldPos is not None:
+  #          posQueue.append(DroneVideo.worldPos)
+  #          print(posQueue)
+  #          if len(posQueue) > 10:
+  #              posQueue.popleft()
+  #              ax.plot([posQueue[i][0] for i in range(0,10)],\
+  #                      [posQueue[i][1] for i in range(0,10)],\
+  #                      [posQueue[i][2] for i in range(0,10)])
+  #              plt.draw()  1
+  #              plt.pause(0.1)
+  #              ax.cla()
+
 
 def main():
     try:
-       # flightData = tellopy.FlightData()
+        
         frameCount = 0
         threading.Thread(target = recv_thread).start()
         #threading.Thread(target = showCamPos_thread).start()
@@ -162,11 +202,6 @@ def main():
                 DroneVideo.estimatePos()
                 #$print(DroneVideo.getARPoint2())
                 DroneVideo.show()
-                if cv2.waitKey(10) & 0xFF == ord ('f'):
-                    drone.takeoff()
-                if cv2.waitKey(10) & 0xFF == ord ('d'):
-                    drone.land()
-
                 if cv2.waitKey(10) & 0xFF == ord('t'):
                     cv2.imwrite (str(frameCount) + ".png", image)
                 #---------show frame end---------------------------------#
