@@ -42,8 +42,9 @@ posQueue = deque([[0.0,0.0,0.0]])
 def handler(event, sender, data, **args):
     drone = sender
     if event is drone.EVENT_FLIGHT_DATA:
+        pass
         #print("event is coming")
-        print(data)
+ #       print(data)
 
 def init_logger():
     handler = StreamHandler()
@@ -73,7 +74,7 @@ class DroneReg():
         self.halfHeight = self.Height / 2
         self.halfWidth = self.Width /2
         self.corners, self.ids, self.rejectedImgPoints = aruco.detectMarkers(self.frame, dictionary)
-        #corners[id0,1,2...][][corner0,1,2,3][x,y]
+        #coners[id0,1,2...][][corner0,1,2,3][x,y]
         aruco.drawDetectedMarkers(self.frame, self.corners, self.ids, (0,255,0))
 
     def show(self):
@@ -89,15 +90,20 @@ class DroneReg():
     def estimatePos(self):
         if len(self.corners) > 0:
             self.retval, self.rvec, self.tvec = aruco.estimatePoseBoard(self.corners, self.ids, board, self.cameraMatrix, self.distanceCoefficients)
-            #self.revc_vec ,_ = cv2.Rodrigues(self.rvec)
-            #self.revc_inv 
+            #self.rvec_vec ,_ = cv2.Rodrigues(self.rvec)
+            #self.rvec_inv 
             self.dst, jacobian = cv2.Rodrigues(self.rvec)
-            self.revc_trs = cv2.transpose(self.dst)
-            self.worldPos = - self.revc_trs * self.tvec
+            self.rvec_trs = cv2.transpose(self.dst)
+            #self.worldRot = cv2.Rodrigues(self.rvec_trs)
+            self.worldRotM = np.zeros(shape=(3,3))
+            cv2.Rodrigues(self.rvec, self.worldRotM,  jacobian = 0 )
+            self.worldRot = cv2.RQDecomp3x3(self.worldRotM)
+            self.worldPos = - self.rvec_trs * self.tvec
             self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
-            print("X:%.0f " % (self.worldPos[0]*100),\
-                    "Y:%.0f "% (self.worldPos[1]*100),\
-                    "Z:%.0f "% (self.worldPos[2]*100))
+            #print("X:%.0f " % (self.worldPos[0]*100),\
+            #        "Y:%.0f "% (self.worldPos[1]*100),\
+            #        "Z:%.0f "% (self.worldPos[2]*100))
+            print(self.worldRot)
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
