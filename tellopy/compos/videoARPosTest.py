@@ -20,9 +20,10 @@ parameters =  aruco.DetectorParameters_create()
 parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
 
 drone = tellopy.Tello()
-board = aruco.GridBoard_create(8, 8 ,0.1515, 0.0585, dictionary) 
-arucoMarkerLength = 0.1515
-PI = 3.1415
+board = aruco.GridBoard_create(5, 7, 0.033, 0.0035, dictionary) 
+#board = aruco.GridBoard_create(5, 7 ,0.1515, 0.0585, dictionary) 
+arucoMarkerLength = 0.0033
+PI = 3.141592653
 
 frameA = None
 run_recv_thread = True
@@ -88,14 +89,15 @@ class DroneReg():
     def estimatePos(self):
         if len(self.corners) > 0:
             self.retval, self.rvec, self.tvec = aruco.estimatePoseBoard(self.corners, self.ids, board, self.cameraMatrix, self.distanceCoefficients)
-            print(self.rvec)
             #self.revc_vec ,_ = cv2.Rodrigues(self.rvec)
             #self.revc_inv 
             self.dst, jacobian = cv2.Rodrigues(self.rvec)
             self.revc_trs = cv2.transpose(self.dst)
             self.worldPos = - self.revc_trs * self.tvec
             self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
- #           print("X: ",self.worldPos[0],"Y: ", self.worldPos[1], "Z: ", self.worldPos[2])
+            print("X:%.0f " % (self.worldPos[0]*100),\
+                    "Y:%.0f "% (self.worldPos[1]*100),\
+                    "Z:%.0f "% (self.worldPos[2]*100))
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
