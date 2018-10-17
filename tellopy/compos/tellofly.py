@@ -12,7 +12,7 @@ import threading
 from multiprocessing  import Process
 from collections import deque
 import socket
-
+from autopiolot import *
 
 aruco = cv2.aruco
 dictionary = aruco.getPredefinedDictionary(aruco.DICT_6X6_1000)
@@ -21,7 +21,7 @@ parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
 
 drone = tellopy.Tello()
 board = aruco.GridBoard_create(5, 7, 0.033, 0.0035, dictionary) 
-#board = aruco.GridBoard_create(5, 7 ,0.1515, 0.0585, dictionary) 
+#board = aruco.GridBoard_create(4, 4,0.1515, 0.5, dictionary) 
 arucoMarkerLength = 0.0033
 PI = 3.141592653
 
@@ -93,7 +93,7 @@ class DroneReg():
             #self.rvec_vec ,_ = cv2.Rodrigues(self.rvec)
             #self.rvec_inv 
             self.dst, jacobian = cv2.Rodrigues(self.rvec)
-            self.rvec_trs = cv2.transpose(self.dst)
+            self.rvec_trs = self.dst.transpose()
             #self.worldRot = cv2.Rodrigues(self.rvec_trs)
             self.worldRotM = np.zeros(shape=(3,3))
             cv2.Rodrigues(self.rvec, self.worldRotM,  jacobian = 0 )
@@ -103,7 +103,7 @@ class DroneReg():
             print("X:%.0f " % (self.worldPos[0]*100),\
                     "Y:%.0f "% (self.worldPos[1]*100),\
                     "Z:%.0f "% (self.worldPos[2]*100))
-            print(self.worldRot[0])
+            print(self.worldRot[0][2])
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
@@ -135,17 +135,20 @@ def recv_thread():
         print("debug: ready to receive video frames...")
         for f in container.decode(video=0):
             frameA = f
-            if DroneVideo.worldPos is not None:
-                messageToUdp = DroneVideo.worldPos
-                messageToUdp = " ".join(str(x) for x in messageToUdp)
-                clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
         time.sleep(0.005)
 
+            #if DroneVideo.worldPos is not None:
+            #    messageToUdp = DroneVideo.worldPos
+            #    messageToUdp = " ".join(str(x) for x in messageToUdp)
+            #    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
 def showCamPos_thread():
     global ax
     global posQueue
     global DroneVideo
     
+
+
+
 
 def main():
     try:
@@ -153,6 +156,10 @@ def main():
         frameCount = 0
         threading.Thread(target = recv_thread).start()
         #threading.Thread(target = showCamPos_thread).start()
+
+        flyflag = False
+        target = [2, 2, 2]
+        count = 0
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.01)
@@ -161,8 +168,8 @@ def main():
                 frameCount += 1
                 frame = frameA
                 im = np.array(frame.to_image())
-                image = cv2.flip(im, 0)
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                #image = cv2.flip(im, 0)
+                image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                 #image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                 
                 #cv2.imshow('Original', image)
@@ -170,10 +177,41 @@ def main():
                 DroneVideo.estimatePos()
                 #$print(DroneVideo.getARPoint2())
                 DroneVideo.show()
+
+                #test fly
+                if flyflag == True:
+                    #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
+                    #        target[1]) < 3 else False
+                    target= [15,15,15]
+                    AdjustX, AdjustY = sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target )
+                    drone.right(AdjustX)
+                    drone.forward(AdjustY)
+                    print(AdjustX, AdjustY)
+                    #if targetAchived == True:
+                    #    count += 1
+                    #    if count % 2 == 1:
+                    #        target = [15, 15, 15]
+                    #    else:
+                    #        target = [2,2,2]
+
+                if cv2.waitKey(10) & 0xFF == ord ('q'):
+                    drone.down(20)
+
+                if cv2.waitKey(10) & 0xFF == ord ('j'):
+                    drone.down(0)
+                if cv2.waitKey(10) & 0xFF == ord ('a'):
+                    flyflag = True
+
+                if cv2.waitKey(10) & 0xFF == ord ('o'):
+                    drone.clockwise(40)
+
+                if cv2.waitKey(10) & 0xFF == ord ('o'):
+                    drone.counter_clockwise(40)
                 if cv2.waitKey(10) & 0xFF == ord ('f'):
                     drone.takeoff()
                 if cv2.waitKey(10) & 0xFF == ord ('d'):
                     drone.land()
+                    flyflag = False
 
                 if cv2.waitKey(10) & 0xFF == ord('t'):
                     cv2.imwrite (str(frameCount) + ".png", image)
