@@ -93,17 +93,31 @@ class DroneReg():
             #self.rvec_vec ,_ = cv2.Rodrigues(self.rvec)
             #self.rvec_inv 
             self.dst, jacobian = cv2.Rodrigues(self.rvec)
+            #self.rvec_trs = np.linalg.inv(self.dst)
             self.rvec_trs = self.dst.transpose()
+            #print(self.dst, self.tvec)
+            self.extristics = np.matrix([[self.dst[0][0],self.dst[0][1],self.dst[0][2],self.tvec[0][0]],
+                                        [self.dst[1][0],self.dst[1][1],self.dst[1][2],self.tvec[1][0]],
+                                        [self.dst[2][0],self.dst[2][1],self.dst[2][2],self.tvec[2][0]],
+                                        [0.0, 0.0, 0.0, 1.0]
+                    ])
+            #print(self.dst,self.tvec)
+            #print("self.extr:", self.extristics)
+            #print("self.extr.I:",self.extristics.I )
             #self.worldRot = cv2.Rodrigues(self.rvec_trs)
+            self.extristics_I = self.extristics.I
+            self.worldPos = [self.extristics_I[0,3]*100,self.extristics_I[1,3]*100,self.extristics_I[2,3]*100]
             self.worldRotM = np.zeros(shape=(3,3))
             cv2.Rodrigues(self.rvec, self.worldRotM,  jacobian = 0 )
             self.worldRot = cv2.RQDecomp3x3(self.worldRotM)
-            self.worldPos = - self.rvec_trs * self.tvec
-            self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
-            print("X:%.0f " % (self.worldPos[0]*100),\
-                    "Y:%.0f "% (self.worldPos[1]*100),\
-                    "Z:%.0f "% (self.worldPos[2]*100))
-            print(self.worldRot[0][2])
+
+            #self.worldPos = - self.tvec * self.rvec_trs 
+            #print( self.tvec, self.rvec)
+            #self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
+            print("X:%.0f " % (self.worldPos[0]),\
+                    "Y:%.0f "% (self.worldPos[1]),\
+                    "Z:%.0f "% (self.worldPos[2]))
+            #print(self.worldRot[0][2])
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
