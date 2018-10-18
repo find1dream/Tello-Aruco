@@ -20,8 +20,8 @@ parameters =  aruco.DetectorParameters_create()
 parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
 
 drone = tellopy.Tello()
-board = aruco.GridBoard_create(5, 7, 0.033, 0.0035, dictionary) 
-#board = aruco.GridBoard_create(4, 4,0.1515, 0.5, dictionary) 
+#board = aruco.GridBoard_create(5, 7, 0.033, 0.0035, dictionary) 
+board = aruco.GridBoard_create(8, 8,0.1515, 0.0585, dictionary) 
 arucoMarkerLength = 0.0033
 PI = 3.141592653
 
@@ -42,9 +42,9 @@ posQueue = deque([[0.0,0.0,0.0]])
 def handler(event, sender, data, **args):
     drone = sender
     if event is drone.EVENT_FLIGHT_DATA:
-        pass
+       pass
         #print("event is coming")
- #       print(data)
+       #print(data)
 
 def init_logger():
     handler = StreamHandler()
@@ -80,7 +80,6 @@ class DroneReg():
             #return self.tvec[0][0][2], self.tvec[1][0][2]
     def estimatePos(self):
         if len(self.corners) > 0:
-            TimeStart = datetime.now()
             self.retval, self.rvec, self.tvec = aruco.estimatePoseBoard(self.corners, self.ids, board, self.cameraMatrix, self.distanceCoefficients)
             self.dst, jacobian = cv2.Rodrigues(self.rvec)
             self.extristics = np.matrix([[self.dst[0][0],self.dst[0][1],self.dst[0][2],self.tvec[0][0]],
@@ -105,15 +104,12 @@ class DroneReg():
             #self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
             print("X:%.0f " % (self.worldPos[0]),\
                     "Y:%.0f "% (self.worldPos[1]),\
-                    "Z:%.0f "% (self.worldPos[2]))
-            print(self.worldRot[0][2])
+                    "Z:%.0f "% (self.worldPos[2]),\
+                    "rot:%.0f "% (self.worldRot[0][2]))
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
             
-            TimeEnd = datetime.now()
-            alltime  = TimeEnd - TimeStart
-            print("algorithm time: ",int(alltime.total_seconds()*1000),"ms")
 
     def getAngle(self):
             (roll_angle, pitch_angle, yaw_angle) =  self.rvec[0][0][0]*180/PI, self.rvec[0][0][1]*180/PI, self.rvec[0][0][2]*180/PI
@@ -183,52 +179,60 @@ def main():
                 DroneVideo.estimatePos()
                 aTimeEnd = datetime.now()
                 aalltime  = aTimeEnd - TimeStart
-                print("aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
                 #$print(DroneVideo.getARPoint2())
                 DroneVideo.show()
-                cv2.waitKey(1) 
-                #test fly
-               # if flyflag == True:
-               #     #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
-               #     #        target[1]) < 3 else False
-               #     target= [15,15,15]
-               #     AdjustX, AdjustY = sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target )
-               #     drone.flytoXYZ(AdjustX, AdjustY,0)
-               #     #drone.forward(AdjustY)
-               #     print("adjust: ",AdjustX, AdjustY)
-               #     #if targetAchived == True:
+                if flyflag == True:
+                    #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
+                    #        target[1]) < 3 else False
+                    AdjustX, AdjustY = sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target )
+                    drone.flytoXYZ(AdjustX, AdjustY,0)
+                    #drone.forward(AdjustY)
+                    print("adjust: ",AdjustX, AdjustY)
+                    #if targetAchived == True:
                     #    count += 1
                     #    if count % 2 == 1:
                     #        target = [15, 15, 15]
                     #    else:
                     #        target = [2,2,2]
+                key = cv2.waitKey(1)
+                if key & 0xFF == ord ('j'):
+                    drone.down(20)
+                if key & 0xFF == ord ('q'):
+                    drone.up(20)
+                elif key & 0xFF == ord ('k'):
+                    drone.down(0)
+                elif key & 0xFF == ord ('a'):
+                    flyflag = True
+                elif key & 0xFF == ord ('o'):
+                    drone.clockwise(40)
+                elif key & 0xFF == ord ('b'):
+                    target= [100,100,100]
+                    
+                elif key & 0xFF == ord ('m'):
+                    target= [20,20,20]
+                
+
+                elif key & 0xFF == ord ('o'):
+                    drone.counter_clockwise(20)
+                elif key & 0xFF == ord ('s'):
+                    drone.counter_clockwise(0)
+                    drone.forward(0)
+                    drone.right(0)
+                elif key & 0xFF == ord ('f'):
+                    drone.takeoff()
+                elif key & 0xFF == ord ('d'):
+                    drone.land()
+                    flyflag = False
+                elif key & 0xFF == ord('t'):
+                    cv2.imwrite (str(frameCount) + ".png", image)
+                #test fly
 
                # if cv2.waitKey(5) & 0xFF == ord ('q'):
-               #     drone.down(20)
-
-               # if cv2.waitKey(5) & 0xFF == ord ('j'):
-               #     drone.down(0)
-               # if cv2.waitKey(10) & 0xFF == ord ('a'):
-               #     flyflag = True
-
-               # if cv2.waitKey(5) & 0xFF == ord ('o'):
-               #     drone.clockwise(40)
-
-               # if cv2.waitKey(5) & 0xFF == ord ('o'):
-               #     drone.counter_clockwise(40)
-               # if cv2.waitKey(5) & 0xFF == ord ('f'):
-               #     drone.takeoff()
-               # if cv2.waitKey(5) & 0xFF == ord ('d'):
-               #     drone.land()
-               #     flyflag = False
-
-               # if cv2.waitKey(5) & 0xFF == ord('t'):
-               #     cv2.imwrite (str(frameCount) + ".png", image)
                 #---------show frame end---------------------------------#
                 #print("debug: got frame")
                 TimeEnd = datetime.now()
                 alltime  = TimeEnd - TimeStart
-                print("all time: ",int(alltime.total_seconds()*1000),"ms")
+                print("all time: ",int(alltime.total_seconds()*1000),"ms", " aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
 
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()

@@ -1,7 +1,7 @@
 import math
 Dronefly_P = 1.0
 Dronefly_D = 0.0
-Limit_XY = 5
+Limit_XY = 10
 Limit_Z = 5
 # input: angle, position now and target, 
 # output: pid out of x, y
