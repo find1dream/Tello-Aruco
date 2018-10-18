@@ -13,7 +13,7 @@ from multiprocessing  import Process
 from collections import deque
 import socket
 from autopiolot import *
-
+from datetime import datetime
 aruco = cv2.aruco
 dictionary = aruco.getPredefinedDictionary(aruco.DICT_6X6_1000)
 parameters =  aruco.DetectorParameters_create()
@@ -29,10 +29,10 @@ frameA = None
 run_recv_thread = True
 
 
-udp_ip = "127.0.0.1"
-udp_port = 5555
+#udp_ip = "127.0.0.1"
+#udp_port = 5555
 
-clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 #serverSock.bind((udp_ip, udp_port))
 
@@ -60,22 +60,13 @@ def init_logger():
 class DroneReg():
     def __init__(self):
         self.worldPos = None
-        self.cameraMatrix = np.load('mtx.npy')
-        self.distanceCoefficients = np.load('dist.npy')
+        self.cameraMatrix = np.load('./camPara/mtx.npy')
+        self.distanceCoefficients = np.load('./camPara/dist.npy')
 
     def findARMarker(self,frame):
         self.frame =  frame
-        #Height, Width = frame.shape[:2]
-        if len(self.frame.shape) == 3:
-            self.Height, self.Width, self.channels = self.frame.shape[:3]
-        else:
-            self.Height, self.Width = self.frame.shape[:2]
-        self.channels = 1
-        self.halfHeight = self.Height / 2
-        self.halfWidth = self.Width /2
         self.corners, self.ids, self.rejectedImgPoints = aruco.detectMarkers(self.frame, dictionary)
-        #coners[id0,1,2...][][corner0,1,2,3][x,y]
-        aruco.drawDetectedMarkers(self.frame, self.corners, self.ids, (0,255,0))
+        #aruco.drawDetectedMarkers(self.frame, self.corners, self.ids, (0,255,0))
 
     def show(self):
         cv2.imshow("result", self.frame)
@@ -89,13 +80,9 @@ class DroneReg():
             #return self.tvec[0][0][2], self.tvec[1][0][2]
     def estimatePos(self):
         if len(self.corners) > 0:
+            TimeStart = datetime.now()
             self.retval, self.rvec, self.tvec = aruco.estimatePoseBoard(self.corners, self.ids, board, self.cameraMatrix, self.distanceCoefficients)
-            #self.rvec_vec ,_ = cv2.Rodrigues(self.rvec)
-            #self.rvec_inv 
             self.dst, jacobian = cv2.Rodrigues(self.rvec)
-            #self.rvec_trs = np.linalg.inv(self.dst)
-            self.rvec_trs = self.dst.transpose()
-            #print(self.dst, self.tvec)
             self.extristics = np.matrix([[self.dst[0][0],self.dst[0][1],self.dst[0][2],self.tvec[0][0]],
                                         [self.dst[1][0],self.dst[1][1],self.dst[1][2],self.tvec[1][0]],
                                         [self.dst[2][0],self.dst[2][1],self.dst[2][2],self.tvec[2][0]],
@@ -106,7 +93,9 @@ class DroneReg():
             #print("self.extr.I:",self.extristics.I )
             #self.worldRot = cv2.Rodrigues(self.rvec_trs)
             self.extristics_I = self.extristics.I
-            self.worldPos = [self.extristics_I[0,3]*100,self.extristics_I[1,3]*100,self.extristics_I[2,3]*100]
+            self.worldPos = [round(self.extristics_I[0,3]*100),\
+                    round(self.extristics_I[1,3]*100),\
+                    round(self.extristics_I[2,3]*100)]
             self.worldRotM = np.zeros(shape=(3,3))
             cv2.Rodrigues(self.rvec, self.worldRotM,  jacobian = 0 )
             self.worldRot = cv2.RQDecomp3x3(self.worldRotM)
@@ -117,10 +106,14 @@ class DroneReg():
             print("X:%.0f " % (self.worldPos[0]),\
                     "Y:%.0f "% (self.worldPos[1]),\
                     "Z:%.0f "% (self.worldPos[2]))
-            #print(self.worldRot[0][2])
+            print(self.worldRot[0][2])
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
+            
+            TimeEnd = datetime.now()
+            alltime  = TimeEnd - TimeStart
+            print("algorithm time: ",int(alltime.total_seconds()*1000),"ms")
 
     def getAngle(self):
             (roll_angle, pitch_angle, yaw_angle) =  self.rvec[0][0][0]*180/PI, self.rvec[0][0][1]*180/PI, self.rvec[0][0][2]*180/PI
@@ -132,7 +125,6 @@ class DroneReg():
         return len(self.corners)
 
 
-DroneVideo = DroneReg()
 def recv_thread():
     global frameA
     global run_recv_thread
@@ -149,16 +141,12 @@ def recv_thread():
         print("debug: ready to receive video frames...")
         for f in container.decode(video=0):
             frameA = f
-        time.sleep(0.005)
+        time.sleep(0.001)
 
             #if DroneVideo.worldPos is not None:
             #    messageToUdp = DroneVideo.worldPos
             #    messageToUdp = " ".join(str(x) for x in messageToUdp)
             #    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
-def showCamPos_thread():
-    global ax
-    global posQueue
-    global DroneVideo
     
 
 
@@ -167,6 +155,7 @@ def showCamPos_thread():
 def main():
     try:
        # flightData = tellopy.FlightData()
+        DroneVideo = DroneReg()
         frameCount = 0
         threading.Thread(target = recv_thread).start()
         #threading.Thread(target = showCamPos_thread).start()
@@ -174,63 +163,72 @@ def main():
         flyflag = False
         target = [2, 2, 2]
         count = 0
+        #aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
+        #cv2.imshow("result", aa)
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.01)
             else:
                 #---------show frame start-------------------------------#
+                TimeStart = datetime.now()
                 frameCount += 1
                 frame = frameA
                 im = np.array(frame.to_image())
-                #image = cv2.flip(im, 0)
-                image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+                image = cv2.flip(im, 0)
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 #image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                 
                 #cv2.imshow('Original', image)
                 DroneVideo.findARMarker(image)
                 DroneVideo.estimatePos()
+                aTimeEnd = datetime.now()
+                aalltime  = aTimeEnd - TimeStart
+                print("aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
                 #$print(DroneVideo.getARPoint2())
                 DroneVideo.show()
-
+                cv2.waitKey(1) 
                 #test fly
-                if flyflag == True:
-                    #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
-                    #        target[1]) < 3 else False
-                    target= [15,15,15]
-                    AdjustX, AdjustY = sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target )
-                    drone.right(AdjustX)
-                    drone.forward(AdjustY)
-                    print(AdjustX, AdjustY)
-                    #if targetAchived == True:
+               # if flyflag == True:
+               #     #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
+               #     #        target[1]) < 3 else False
+               #     target= [15,15,15]
+               #     AdjustX, AdjustY = sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target )
+               #     drone.flytoXYZ(AdjustX, AdjustY,0)
+               #     #drone.forward(AdjustY)
+               #     print("adjust: ",AdjustX, AdjustY)
+               #     #if targetAchived == True:
                     #    count += 1
                     #    if count % 2 == 1:
                     #        target = [15, 15, 15]
                     #    else:
                     #        target = [2,2,2]
 
-                if cv2.waitKey(10) & 0xFF == ord ('q'):
-                    drone.down(20)
+               # if cv2.waitKey(5) & 0xFF == ord ('q'):
+               #     drone.down(20)
 
-                if cv2.waitKey(10) & 0xFF == ord ('j'):
-                    drone.down(0)
-                if cv2.waitKey(10) & 0xFF == ord ('a'):
-                    flyflag = True
+               # if cv2.waitKey(5) & 0xFF == ord ('j'):
+               #     drone.down(0)
+               # if cv2.waitKey(10) & 0xFF == ord ('a'):
+               #     flyflag = True
 
-                if cv2.waitKey(10) & 0xFF == ord ('o'):
-                    drone.clockwise(40)
+               # if cv2.waitKey(5) & 0xFF == ord ('o'):
+               #     drone.clockwise(40)
 
-                if cv2.waitKey(10) & 0xFF == ord ('o'):
-                    drone.counter_clockwise(40)
-                if cv2.waitKey(10) & 0xFF == ord ('f'):
-                    drone.takeoff()
-                if cv2.waitKey(10) & 0xFF == ord ('d'):
-                    drone.land()
-                    flyflag = False
+               # if cv2.waitKey(5) & 0xFF == ord ('o'):
+               #     drone.counter_clockwise(40)
+               # if cv2.waitKey(5) & 0xFF == ord ('f'):
+               #     drone.takeoff()
+               # if cv2.waitKey(5) & 0xFF == ord ('d'):
+               #     drone.land()
+               #     flyflag = False
 
-                if cv2.waitKey(10) & 0xFF == ord('t'):
-                    cv2.imwrite (str(frameCount) + ".png", image)
+               # if cv2.waitKey(5) & 0xFF == ord('t'):
+               #     cv2.imwrite (str(frameCount) + ".png", image)
                 #---------show frame end---------------------------------#
                 #print("debug: got frame")
+                TimeEnd = datetime.now()
+                alltime  = TimeEnd - TimeStart
+                print("all time: ",int(alltime.total_seconds()*1000),"ms")
 
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()

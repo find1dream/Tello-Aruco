@@ -1,8 +1,8 @@
 import math
-Dronefly_P = 5.0
+Dronefly_P = 1.0
 Dronefly_D = 0.0
-Limit_XY = 20
-Limit_Z = 20
+Limit_XY = 5
+Limit_Z = 5
 # input: angle, position now and target, 
 # output: pid out of x, y
 def sameAngleAutoflytoXY(nowpos, nowangle,targetpos):
@@ -10,10 +10,10 @@ def sameAngleAutoflytoXY(nowpos, nowangle,targetpos):
     ErrorY = targetpos[1] - nowpos[1]
     Out_X = 0
     Out_Y = 0
-    if (abs(ErrorX)>3):
-        Out_X = ErrorX * Dronefly_P
-    if (abs(ErrorY)>3):
-        Out_Y = ErrorY * Dronefly_P
+    #if (abs(ErrorX)>3):
+    Out_X = ErrorX * Dronefly_P
+    #if (abs(ErrorY)>3):
+    Out_Y = ErrorY * Dronefly_P
     if (abs(Out_X)>Limit_XY):
         Out_X = Limit_XY if Out_X > 0 else -Limit_XY
     if (abs(Out_Y)>Limit_XY):
