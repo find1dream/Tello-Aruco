@@ -14,21 +14,11 @@ from collections import deque
 import socket
 from autopiolot import *
 from datetime import datetime
-aruco = cv2.aruco
-dictionary = aruco.getPredefinedDictionary(aruco.DICT_6X6_1000)
-parameters =  aruco.DetectorParameters_create()
-parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
+from computerVision import *
 
 drone = tellopy.Tello()
-#board = aruco.GridBoard_create(5, 7, 0.033, 0.0035, dictionary) 
-board = aruco.GridBoard_create(8, 8,0.1515, 0.0585, dictionary) 
-arucoMarkerLength = 0.0033
-PI = 3.141592653
-
 frameA = None
 run_recv_thread = True
-
-
 #udp_ip = "127.0.0.1"
 #udp_port = 5555
 
@@ -36,15 +26,12 @@ run_recv_thread = True
 
 #serverSock.bind((udp_ip, udp_port))
 
-posQueue = deque([[0.0,0.0,0.0]])
-#pos = np.random.randint(-10,10,size=(1,10,3))
-
 def handler(event, sender, data, **args):
     drone = sender
     if event is drone.EVENT_FLIGHT_DATA:
-       pass
+       
         #print("event is coming")
-       #print(data)
+       print(data.north_speed, data.east_speed, data.ground_speed)
 
 def init_logger():
     handler = StreamHandler()
@@ -53,73 +40,6 @@ def init_logger():
     logger = getLogger()
     logger.addHandler(handler)
     logger.setLevel(INFO)
-
-
-
-
-class DroneReg():
-    def __init__(self):
-        self.worldPos = None
-        self.cameraMatrix = np.load('./camPara/mtx.npy')
-        self.distanceCoefficients = np.load('./camPara/dist.npy')
-
-    def findARMarker(self,frame):
-        self.frame =  frame
-        self.corners, self.ids, self.rejectedImgPoints = aruco.detectMarkers(self.frame, dictionary)
-        #aruco.drawDetectedMarkers(self.frame, self.corners, self.ids, (0,255,0))
-
-    def show(self):
-        cv2.imshow("result", self.frame)
-
-    def getDistance(self):
-        if len(self.corners) > 0:
-            self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners, arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
-            G = np.mean(self.tvec, axis = 0)
-            return G[0][2]
-
-            #return self.tvec[0][0][2], self.tvec[1][0][2]
-    def estimatePos(self):
-        if len(self.corners) > 0:
-            self.retval, self.rvec, self.tvec = aruco.estimatePoseBoard(self.corners, self.ids, board, self.cameraMatrix, self.distanceCoefficients)
-            self.dst, jacobian = cv2.Rodrigues(self.rvec)
-            self.extristics = np.matrix([[self.dst[0][0],self.dst[0][1],self.dst[0][2],self.tvec[0][0]],
-                                        [self.dst[1][0],self.dst[1][1],self.dst[1][2],self.tvec[1][0]],
-                                        [self.dst[2][0],self.dst[2][1],self.dst[2][2],self.tvec[2][0]],
-                                        [0.0, 0.0, 0.0, 1.0]
-                    ])
-            #print(self.dst,self.tvec)
-            #print("self.extr:", self.extristics)
-            #print("self.extr.I:",self.extristics.I )
-            #self.worldRot = cv2.Rodrigues(self.rvec_trs)
-            self.extristics_I = self.extristics.I
-            self.worldPos = [round(self.extristics_I[0,3]*100),\
-                    round(self.extristics_I[1,3]*100),\
-                    round(self.extristics_I[2,3]*100)]
-            self.worldRotM = np.zeros(shape=(3,3))
-            cv2.Rodrigues(self.rvec, self.worldRotM,  jacobian = 0 )
-            self.worldRot = cv2.RQDecomp3x3(self.worldRotM)
-
-            #self.worldPos = - self.tvec * self.rvec_trs 
-            #print( self.tvec, self.rvec)
-            #self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
-            print("X:%.0f " % (self.worldPos[0]),\
-                    "Y:%.0f "% (self.worldPos[1]),\
-                    "Z:%.0f "% (self.worldPos[2]),\
-                    "rot:%.0f "% (self.worldRot[0][2]))
-            #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
-            if self.retval != 0:
-                self.frame = aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
-            
-
-    def getAngle(self):
-            (roll_angle, pitch_angle, yaw_angle) =  self.rvec[0][0][0]*180/PI, self.rvec[0][0][1]*180/PI, self.rvec[0][0][2]*180/PI
-            if pitch_angle < 0:
-                roll_angle, pitch_angle, yaw_angle = -roll_angle, -pitch_angle, -yaw_angle
-            return (roll_angle, pitch_angle, yaw_angle)
-
-    def getExistMarker(self):
-        return len(self.corners)
-
 
 def recv_thread():
     global frameA
@@ -139,11 +59,11 @@ def recv_thread():
             frameA = f
         time.sleep(0.001)
 
+    
             #if DroneVideo.worldPos is not None:
             #    messageToUdp = DroneVideo.worldPos
             #    messageToUdp = " ".join(str(x) for x in messageToUdp)
             #    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
-    
 
 
 
@@ -174,7 +94,7 @@ def main():
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 #image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                 
-                #cv2.imshow('Original', image)
+                cv2.imshow('Original', image)
                 DroneVideo.findARMarker(image)
                 DroneVideo.estimatePos()
                 aTimeEnd = datetime.now()
@@ -232,7 +152,7 @@ def main():
                 #print("debug: got frame")
                 TimeEnd = datetime.now()
                 alltime  = TimeEnd - TimeStart
-                print("all time: ",int(alltime.total_seconds()*1000),"ms", " aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
+                #print("all time: ",int(alltime.total_seconds()*1000),"ms", " aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
 
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
