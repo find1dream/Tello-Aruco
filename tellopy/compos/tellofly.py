@@ -15,6 +15,7 @@ import socket
 from autopiolot import *
 from datetime import datetime
 from computerVision import *
+from udp_server import *
 
 drone = tellopy.Tello()
 frameA = None
@@ -27,11 +28,12 @@ run_recv_thread = True
 #serverSock.bind((udp_ip, udp_port))
 
 def handler(event, sender, data, **args):
-    drone = sender
-    if event is drone.EVENT_FLIGHT_DATA:
-       
+    pass
+    #drone = sender
+    #if event is drone.EVENT_FLIGHT_DATA:
+    #   pass
         #print("event is coming")
-       print(data.north_speed, data.east_speed, data.ground_speed)
+       #print(data.north_speed, data.east_speed, data.ground_speed)
 
 def init_logger():
     handler = StreamHandler()
@@ -65,7 +67,10 @@ def recv_thread():
             #    messageToUdp = " ".join(str(x) for x in messageToUdp)
             #    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
 
-
+def msg_thread():
+    udpread = getPosData()
+    while True:
+        print("data received: ",udpread.recvdata())
 
 
 def main():
@@ -74,7 +79,7 @@ def main():
         DroneVideo = DroneReg()
         frameCount = 0
         threading.Thread(target = recv_thread).start()
-        #threading.Thread(target = showCamPos_thread).start()
+        threading.Thread(target = msg_thread).start()
 
         flyflag = False
         target = [2, 2, 2]
@@ -100,7 +105,7 @@ def main():
                 aTimeEnd = datetime.now()
                 aalltime  = aTimeEnd - TimeStart
                 #$print(DroneVideo.getARPoint2())
-                DroneVideo.show()
+                #DroneVideo.show()
                 if flyflag == True:
                     #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
                     #        target[1]) < 3 else False
