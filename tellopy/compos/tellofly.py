@@ -16,6 +16,7 @@ from autopiolot import *
 from datetime import datetime
 from computerVision import *
 from udp_server import *
+from circlefly import *
 
 drone = tellopy.Tello()
 frameA = None
@@ -82,11 +83,13 @@ def main():
         threading.Thread(target = msg_thread).start()
 
         flyflag = False
-        target = np.array([120, 120, 100])
         count = 0
         aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
         cv2.imshow("result", aa)
         autofly = autopiolot()
+        cirfly = circlefly(45,16)
+        finishedNum = 0
+        target = np.array([120, 120, 100])
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.01)
@@ -112,6 +115,7 @@ def main():
                     #        target[1]) < 3 else False
                     #DroneVideo.worldPos = np.array([20,4, 10])
                     #AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, 2,target)
+                    finishedNum, target = cirfly.fly(finishedNum, DroneVideo.worldPos)
                     AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target)
                     drone.flytoXYZ(AdjustX, AdjustY,0)
                     #drone.forward(AdjustY)
