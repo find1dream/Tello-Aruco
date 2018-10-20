@@ -68,39 +68,28 @@ def recv_thread():
             #    messageToUdp = " ".join(str(x) for x in messageToUdp)
             #    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
 
-target = np.array([120, 120, 100])
-flyflag = False
 def msg_thread():
-    global target
-    global flyflag
     udpread = getPosData()
     while True:
-        #print("receive data")
-        num, data = udpread.getmsg()
-        if num != 9:
-            target = data
-            print("target: ",target)
-        else:
-            flyflag = True
+        print("data received: ",udpread.recvdata())
 
 
 def main():
     try:
-        global flyflag
-        global target
        # flightData = tellopy.FlightData()
         DroneVideo = DroneReg()
         frameCount = 0
         threading.Thread(target = recv_thread).start()
         threading.Thread(target = msg_thread).start()
 
+        flyflag = False
         count = 0
         aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
         cv2.imshow("result", aa)
         autofly = autopiolot()
         cirfly = circlefly(45,16)
         finishedNum = 0
-        completeflg = False
+        target = np.array([120, 120, 100])
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.01)
@@ -116,6 +105,7 @@ def main():
                 
                 #cv2.imshow('Original', image)
                 DroneVideo.findARMarker(image)
+
                 DroneVideo.estimatePos()
                 aTimeEnd = datetime.now()
                 aalltime  = aTimeEnd - TimeStart
@@ -126,7 +116,7 @@ def main():
                     #        target[1]) < 3 else False
                     #DroneVideo.worldPos = np.array([20,4, 10])
                     #AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, 2,target)
-                    #finishedNum, target = cirfly.fly(finishedNum, DroneVideo.worldPos)
+                    finishedNum, target = cirfly.fly(finishedNum, DroneVideo.worldPos)
                     AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target)
                     drone.flytoXYZ(AdjustX, AdjustY,0)
                     #drone.forward(AdjustY)

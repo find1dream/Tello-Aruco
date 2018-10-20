@@ -9,28 +9,43 @@ class getPosData():
         self.socket.bind((self.host, self.port))
         print("udp initialization complete...")
 
-    def recvdata(self):
+    def rcvRawdata(self):
         data, _ = self.socket.recvfrom(512)
         #data = "9 33 74 66"
         data = data.decode()
-        data = [int(m) for m in data.split()]
-
+        data = np.array([int(m) for m in data.split()])
+        num = data[0]
+        data = data[1:]
         try:
-            if data[0] != 9:
-                return data[0], np.array([data[1],data[2],data[3]])
+            if num != 9:
+                for index, value in enumerate(data):
+                     if value > 180:
+                         data[index] = 180
+                     if value < 0:
+                         data[index] = 0
+                
+                return num, data
             else:
-                return data[0], 0
+                return num, 0
         except:
             print("plese chekck data length...")
+            self.close()
 
-    def processdata(self, cmd, data):
-        pass
+    def getmsg(self):
+        cmd, pos = self.rcvRawdata()
+
+        if cmd != 9:
+            return cmd, pos
+        else:
+            return cmd, 0
 
     def close(self):
         self.socket.close()
 
 if __name__ == "__main__":
     udpRead = getPosData()
-    mm, nn = udpRead.recvdata()
-    print(mm,nn)
+    while True:
+
+        mm,n = udpRead.rcvRawdata()
+        print(mm,n)
 

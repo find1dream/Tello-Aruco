@@ -24,8 +24,8 @@ class autopiolot():
         self.datafilter(errorlist)
         #print(errorlist, self.errorpast, self.errornow, self.derror)
         out = self.Dronefly_P * self.errornow + self.Dronefly_D * self.derror
-        print("drone para",self.Dronefly_P, self.Dronefly_D,"outP:", self.Dronefly_P *self.errornow,\
-                "outD:", self.Dronefly_D*self.derror)
+        #print("drone para",self.Dronefly_P, self.Dronefly_D,"outP:", self.Dronefly_P *self.errornow,\
+        #        "outD:", self.Dronefly_D*self.derror)
         return out
     
     def datafilter(self,errorlist):
@@ -41,7 +41,7 @@ class autopiolot():
             if value < -self.MaxDErrorRate:
                 derror[index] = - self.MaxDErrorRate
         self.derror = derror
-        print("derror: ", self.derror)
+        #print("derror: ", self.derror)
         self.derrordeque.append(derror)
         if len(self.derrordeque) > 5:
             self.derrordeque.popleft()
@@ -57,7 +57,7 @@ class autopiolot():
         Out_X = out[0] * math.cos(math.radians(nowangle)) + out[1] * math.sin(math.radians(nowangle))
         Out_Y = -out[0] * math.sin(math.radians(nowangle)) + out[1] * math.cos(math.radians(nowangle))
         ratio = 1.0 
-        print("out now: ",Out_X, Out_Y)
+        #print("out now: ",Out_X, Out_Y)
        # if abs(self.errornow[0])>self.ErrorMargin or abs(self.errornow[1])>self.ErrorMargin:
        #     error_rate = abs(self.errornow[0]) if abs(self.errornow[0]) > self.ErrorMargin else abs(self.errornow[1])
        #     if error_rate > self.Max_error:
@@ -71,7 +71,7 @@ class autopiolot():
             Cpsratio = self.SpdLimit/abs(Out_X) if abs(Out_X)>abs(Out_Y) else self.SpdLimit/abs(Out_Y)
             Out_X = Cpsratio * Out_X
             Out_Y = Cpsratio * Out_Y
-        print("out after transfrom: ", Out_X, Out_Y)
+        #print("out after transfrom: ", Out_X, Out_Y)
         return Out_X, Out_Y
 
 

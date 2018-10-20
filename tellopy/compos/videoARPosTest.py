@@ -60,8 +60,8 @@ def init_logger():
 class DroneReg():
     def __init__(self):
         self.worldPos = None
-        self.cameraMatrix = np.load('mtx.npy')
-        self.distanceCoefficients = np.load('dist.npy')
+        self.cameraMatrix = np.load('./camPara/mtx.npy')
+        self.distanceCoefficients = np.load('./camPara/dist.npy')
 
     def findARMarker(self,frame):
         self.frame =  frame
