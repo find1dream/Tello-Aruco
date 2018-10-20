@@ -82,10 +82,11 @@ def main():
         threading.Thread(target = msg_thread).start()
 
         flyflag = False
-        target = [2, 2, 2]
+        target = np.array([120, 120, 100])
         count = 0
-        #aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
-        #cv2.imshow("result", aa)
+        aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
+        cv2.imshow("result", aa)
+        autofly = autopiolot()
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.01)
@@ -99,7 +100,7 @@ def main():
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 #image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                 
-                cv2.imshow('Original', image)
+                #cv2.imshow('Original', image)
                 DroneVideo.findARMarker(image)
                 DroneVideo.estimatePos()
                 aTimeEnd = datetime.now()
@@ -109,7 +110,9 @@ def main():
                 if flyflag == True:
                     #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
                     #        target[1]) < 3 else False
-                    AdjustX, AdjustY = sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target )
+                    #DroneVideo.worldPos = np.array([20,4, 10])
+                    #AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, 2,target)
+                    AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target)
                     drone.flytoXYZ(AdjustX, AdjustY,0)
                     #drone.forward(AdjustY)
                     print("adjust: ",AdjustX, AdjustY)
@@ -131,11 +134,25 @@ def main():
                 elif key & 0xFF == ord ('o'):
                     drone.clockwise(40)
                 elif key & 0xFF == ord ('b'):
-                    target= [100,100,100]
+                    target= np.array([120,120,120])
                     
                 elif key & 0xFF == ord ('m'):
-                    target= [20,20,20]
+                    target= np.array([40,40,40])
                 
+                elif key & 0xFF == ord ('p'):
+                    autofly.Dronefly_P += 0.1
+                elif key & 0xFF == ord ('y'):
+                    autofly.Dronefly_P -= 0.1
+
+                elif key & 0xFF == ord ('f'):
+                    autofly.Dronefly_D += 0.2
+                elif key & 0xFF == ord ('g'):
+                    autofly.Dronefly_D -= 0.2
+
+                elif key & 0xFF == ord ('e'):
+                    autofly.SpdLimit += 2.0
+                elif key & 0xFF == ord ('u'):
+                    autofly.SpdLimit -= 2.0
 
                 elif key & 0xFF == ord ('o'):
                     drone.counter_clockwise(20)
@@ -143,7 +160,7 @@ def main():
                     drone.counter_clockwise(0)
                     drone.forward(0)
                     drone.right(0)
-                elif key & 0xFF == ord ('f'):
+                elif key & 0xFF == ord ('h'):
                     drone.takeoff()
                 elif key & 0xFF == ord ('d'):
                     drone.land()
