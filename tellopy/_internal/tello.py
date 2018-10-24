@@ -492,8 +492,19 @@ class Tello(object):
         pkt = Packet(data)
         cmd = uint16(data[5], data[6])
         if cmd == LOG_MSG:
+            print("log header........................................................................")
+            p = pkt.payload().get_array()
+            iD = (struct.unpack('<H', p[0:2])[0])
+            returnpayload = bytearray([0])
+            returnpayload.extend(struct.pack('<H',iD))
+            self.send_packet_data(LOG_MSG, 0x50, returnpayload)
             log.debug("recv: log: %s" % byte_to_hexstring(data[9:]))
             self.__publish(event=self.EVENT_LOG, data=data[9:])
+        elif cmd == TELLO_CMD_LOG_DATA_WRITE:
+            print("hahahahahahhahahahahahahhaha")
+            p = bytearray(payload.get_array())
+            self._parseLogPacket(p)
+
         elif cmd == WIFI_MSG:
             log.debug("recv: wifi: %s" % byte_to_hexstring(data[9:]))
             self.wifi_strength = data[9]
@@ -530,6 +541,7 @@ class Tello(object):
                 log.warn('      file size: payload too small: %s' % byte_to_hexstring(pkt.get_data()))
             # Ack the packet.
             self.send_packet(pkt)
+
         elif cmd == TELLO_CMD_FILE_DATA:
             # log.info("recv: file data: %s" % byte_to_hexstring(data[9:21]))
             # Drone is sending us a fragment of a file it told us to prepare
@@ -540,6 +552,40 @@ class Tello(object):
             return False
 
         return True
+    
+    def _parseLogPacket(self, data):
+        pos = 1
+        while pos < len(data) - 2:
+            if bytearray([data[pos]]) != 'U':
+                break
+            length = data[pos + 1]
+            if data[pos + 2] != 0:
+                break
+            try: ID = struct.unpack("H", data[pos + 4: pos + 6])[0]
+            except error: pass
+            xorBuf = bytearray(1024)
+            try:
+                xorVal = bytearray([data[pos + 6]])
+            except IndexError:
+                pass
+            if ID == 0x1d: #MVO Data
+                for i in range(length):
+                    try:
+                        xorBuf[i] = (data[pos + i] ^ xorVal[0])
+                    except IndexError:
+                        pass
+                velX = struct.unpack("H", xorBuf[12:14])[0]
+                velY = struct.unpack("H", xorBuf[14:16])[0]
+                velZ = struct.unpack("H", xorBuf[16:18])[0]
+                posX = struct.unpack("f", xorBuf[18:22])[0]
+                posY = struct.unpack("f", xorBuf[22:26])[0]
+                posZ = struct.unpack("f", xorBuf[26:30])[0]
+                tempPos = [posX, posY, posZ]
+                for i in range(3):
+                    if tempPos[i] > 30000:
+                        tempPos[i] = (65536 - tempPos[i]) * -1
+                self.position = [a - b for a,b in zip(tempPos, self.position_offset)]
+        pos += length
 
     def recv_height_data(self):
         pass

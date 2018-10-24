@@ -8,7 +8,8 @@ import numpy as np
 
 class circlefly():
     def __init__(self,r,num):
-        self.targetList = np.array(self.pointsInCircum(r,num))
+        self.targetList =  np.array([[10,21*7,100],[21*7,21*7,100],[21*7,10,100]])
+        #self.targetList = np.array(self.pointsInCircum(r,num))
 
 
     def circleTargetPosCalcu(self, fNum):
@@ -37,7 +38,7 @@ class circlefly():
             return fnumnow, targetPos
     
     def pointsInCircum(self, r=40,n = 100):
-            return [[80 + math.cos(2*math.pi/n*x)*r,80 + math.sin(2*math.pi/n*x)*r,100] for x in range(0,n+1)]
+            return [[70 - math.cos(-(0.25*math.pi)+2*math.pi/n*x)*r,72 + math.sin(-(0.25*math.pi)+2*math.pi/n*x)*r,100] for x in range(0,n+1)]
 
 if __name__ == "__main__":
     posNow = np.array([14,15,20])

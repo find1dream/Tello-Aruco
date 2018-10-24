@@ -17,7 +17,7 @@ from datetime import datetime
 from computerVision import *
 from udp_server import *
 from circlefly import *
-
+from transformations import *
 drone = tellopy.Tello()
 frameA = None
 run_recv_thread = True
@@ -98,9 +98,11 @@ def main():
         aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
         cv2.imshow("result", aa)
         autofly = autopiolot()
-        cirfly = circlefly(45,16)
+        cirfly = circlefly(40,16)
         finishedNum = 0
         completeflg = False
+        targe = np.array([120, 120, 100])
+
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.01)
@@ -117,6 +119,11 @@ def main():
                 #cv2.imshow('Original', image)
                 DroneVideo.findARMarker(image)
                 DroneVideo.estimatePos()
+                q = drone.quater
+                euler = euler_from_quaternion(q) 
+
+                euler = np.array([math.degrees(euler[1]),math.degrees(euler[2]),math.degrees(euler[0])])
+                print("euler: ", euler)
                 aTimeEnd = datetime.now()
                 aalltime  = aTimeEnd - TimeStart
                 #$print(DroneVideo.getARPoint2())
@@ -126,9 +133,12 @@ def main():
                     #        target[1]) < 3 else False
                     #DroneVideo.worldPos = np.array([20,4, 10])
                     #AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, 2,target)
-                    #finishedNum, target = cirfly.fly(finishedNum, DroneVideo.worldPos)
-                    AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],target)
-                    drone.flytoXYZ(AdjustX, AdjustY,0)
+                    finishedNum, targe = cirfly.fly(finishedNum, DroneVideo.worldPos)
+                    AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],targe)
+                    if finishedNum != 3:
+                        drone.flytoXYZ(AdjustX, AdjustY,0)
+                    else:
+                        drone.flytoXYZ(0,0,0)
                     #drone.forward(AdjustY)
                     print("adjust: ",AdjustX, AdjustY)
                     #if targetAchived == True:
@@ -149,10 +159,10 @@ def main():
                 elif key & 0xFF == ord ('o'):
                     drone.clockwise(40)
                 elif key & 0xFF == ord ('b'):
-                    target= np.array([120,120,120])
+                    targe= np.array([120,120,120])
                     
                 elif key & 0xFF == ord ('m'):
-                    target= np.array([40,40,40])
+                    targe= np.array([40,40,40])
                 
                 elif key & 0xFF == ord ('p'):
                     autofly.Dronefly_P += 0.1

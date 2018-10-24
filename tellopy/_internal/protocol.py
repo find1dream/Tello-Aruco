@@ -26,7 +26,7 @@ TAKE_PICTURE_COMMAND = 48
 TELLO_CMD_FILE_SIZE                 = 98     # pt50
 TELLO_CMD_FILE_DATA                 = 99     # pt50
 TELLO_CMD_FILE_COMPLETE             = 100    # pt48
-
+TELLO_CMD_LOG_DATA_WRITE            = 0x1051   # RX_0
 #Flip commands taken from Go version of code
 #FlipFront flips forward.
 FlipFront = 0
