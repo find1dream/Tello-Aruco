@@ -15,7 +15,7 @@ from . import video_stream
 from . utils import *
 from . protocol import *
 from . import dispatcher
-
+from . bytebuffer import *
 log = logger.Logger('Tello')
 
 
@@ -63,6 +63,10 @@ class Tello(object):
         self.port = port
         self.udpsize = 2000
         self.left_x = 0.0
+        self.vel = [0,0,0]
+        self.quater= [0,0,0,0]
+        self.gyro = [0.0,0.0,0.0]
+        self.acce = [0.0,0.0,0.0]
         self.left_y = 0.0
         self.right_x = 0.0
         self.right_y = 0.0
@@ -490,21 +494,27 @@ class Tello(object):
             return False
 
         pkt = Packet(data)
+        payload = ByteBuffer.wrap(data[9:2000-1])
         cmd = uint16(data[5], data[6])
         if cmd == LOG_MSG:
+            #self.lock.acquire()
             print("log header........................................................................")
-            p = pkt.payload().get_array()
+            p = payload.get_array()
             iD = (struct.unpack('<H', p[0:2])[0])
             returnpayload = bytearray([0])
             returnpayload.extend(struct.pack('<H',iD))
             self.send_packet_data(LOG_MSG, 0x50, returnpayload)
             log.debug("recv: log: %s" % byte_to_hexstring(data[9:]))
             self.__publish(event=self.EVENT_LOG, data=data[9:])
+            #self.lock.release()
         elif cmd == TELLO_CMD_LOG_DATA_WRITE:
-            print("hahahahahahhahahahahahahhaha")
+            #print("hahahahahahhahahahahahahhaha")
+            #self.lock.acquire()
             p = bytearray(payload.get_array())
             self._parseLogPacket(p)
-
+            #print("quater: ", self.quater)
+            #print("vel: ",self.vel)
+            #self.lock.release()
         elif cmd == WIFI_MSG:
             log.debug("recv: wifi: %s" % byte_to_hexstring(data[9:]))
             self.wifi_strength = data[9]
@@ -555,10 +565,13 @@ class Tello(object):
     
     def _parseLogPacket(self, data):
         pos = 1
+        #print(data)
         while pos < len(data) - 2:
-            if bytearray([data[pos]]) != 'U':
+            if bytearray([data[pos]]) != b'U':
+                #print("data U:", bytearray([data[pos]]))
                 break
             length = data[pos + 1]
+            #print("length--data[pos+2]",data[pos+2])
             if data[pos + 2] != 0:
                 break
             try: ID = struct.unpack("H", data[pos + 4: pos + 6])[0]
@@ -568,25 +581,42 @@ class Tello(object):
                 xorVal = bytearray([data[pos + 6]])
             except IndexError:
                 pass
+            #print("pos: ",self.position)
+
             if ID == 0x1d: #MVO Data
                 for i in range(length):
                     try:
                         xorBuf[i] = (data[pos + i] ^ xorVal[0])
                     except IndexError:
                         pass
-                velX = struct.unpack("H", xorBuf[12:14])[0]
-                velY = struct.unpack("H", xorBuf[14:16])[0]
-                velZ = struct.unpack("H", xorBuf[16:18])[0]
+                self.vel[0] = struct.unpack("h", xorBuf[12:14])[0]
+                self.vel[1] = struct.unpack("h", xorBuf[14:16])[0]
+                self.vel[2] = struct.unpack("h", xorBuf[16:18])[0]
                 posX = struct.unpack("f", xorBuf[18:22])[0]
                 posY = struct.unpack("f", xorBuf[22:26])[0]
                 posZ = struct.unpack("f", xorBuf[26:30])[0]
                 tempPos = [posX, posY, posZ]
-                for i in range(3):
-                    if tempPos[i] > 30000:
-                        tempPos[i] = (65536 - tempPos[i]) * -1
-                self.position = [a - b for a,b in zip(tempPos, self.position_offset)]
-        pos += length
+                self.position = tempPos
+            elif ID == 0x0800:   #quaternion
+                offset = 10
+                for i in range(length):
+                    try:
+                        xorBuf[i] = (data[pos + i] ^ xorVal[0])
+                    except IndexError:
+                        pass
+                self.quater[3] = struct.unpack("f", xorBuf[58:62])[0]
+                self.quater[0] = struct.unpack("f", xorBuf[62:66])[0]
+                self.quater[1] = struct.unpack("f", xorBuf[66:70])[0]
+                self.quater[2] = struct.unpack("f", xorBuf[70:74])[0]
 
+                self.gyro[0] = struct.unpack("f", xorBuf[42:46])[0]
+                self.gyro[1] = struct.unpack("f", xorBuf[46:50])[0]
+                self.gyro[2] = struct.unpack("f", xorBuf[50:54])[0]
+
+                self.acce[0] = -struct.unpack("f", xorBuf[30:34])[0]
+                self.acce[1] = -struct.unpack("f", xorBuf[34:38])[0]
+                self.acce[2] = -struct.unpack("f", xorBuf[38:42])[0]
+            pos += length
     def recv_height_data(self):
         pass
 
@@ -678,7 +708,8 @@ class Tello(object):
                 self.__send_stick_command()  # ignore errors
 
             try:
-                data, server = sock.recvfrom(self.udpsize)
+                data = bytearray(1024)
+                self.datasize, server = sock.recvfrom_into(data)
                 log.debug("recv: %s" % byte_to_hexstring(data))
                 self.__process_packet(data)
             except socket.timeout as ex:
