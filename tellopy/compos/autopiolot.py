@@ -3,16 +3,19 @@ import numpy as np
 from collections import deque
 class autopiolot():
     def __init__(self):
-        self.Dronefly_P = 1.0
-        self.Dronefly_D = 12.0  #1 10
-        self.SpdLimit = 30
+        self.Dronefly_P = 7.5
+        self.Dronefly_D = 25.0  #1 10
+        self.SpdLimit = 99
         self.Max_XY = 50
+        self.oldpos = None
         self.ErrorMargin = 15
         self.Max_error = 50
-        self.DroneSpeed_P = 0.0
+        self.DroneSpeed_P = 0.17
         self.DroneSpeed_D = 0.0
+        self.MaxSpeed = 300   #max speed is 300cm/s
         self.TargetSpd = 2
         self.MaxRatio = 3
+        self.speed = np.array([0.0,0.0,0.0])
         self.errorpast = np.array([0.0, 0.0, 0.0])
         self.errornow  = np.array([0.0, 0.0, 0.0])
         self.derrordeque = deque([[0.0,0.0,0.0]])
@@ -20,13 +23,15 @@ class autopiolot():
         self.MaxErrorRate = 10
         self.MaxDErrorRate = 8
 
-    def pidCtl(self,errorlist):
+    def pidCtl(self,errorlist, nowspeed):
         self.datafilter(errorlist)
         #print(errorlist, self.errorpast, self.errornow, self.derror)
-        out = self.Dronefly_P * self.errornow + self.Dronefly_D * self.derror
+        out_refSpd = self.Dronefly_P * self.errornow + self.Dronefly_D * self.derror
         #print("drone para",self.Dronefly_P, self.Dronefly_D,"outP:", self.Dronefly_P *self.errornow,\
         #        "outD:", self.Dronefly_D*self.derror)
-        return out
+        #print("out_refSpd: ", out_refSpd)
+        out_spd = self.DroneSpeed_P * (out_refSpd - nowspeed)
+        return out_spd
     
     def datafilter(self,errorlist):
         self.errorpast = self.errornow
@@ -48,12 +53,56 @@ class autopiolot():
         
     # input: angle, position now and target, 
     # output: pid out of x, y
-    def sameAngleAutoflytoXY(self,nowpos, nowangle, targetpos):
+  #  def sameAngleAutoflytoXY(self,nowpos, nowangle, targetpos):
+  #      #print(nowpos, targetpos, nowpos-targetpos)
+  #      #print(self.Drone)
+  #      errorlist = targetpos - nowpos
+  #      out = self.pidCtl(errorlist)
+
+  #      Out_X = out[0] * math.cos(math.radians(nowangle)) + out[1] * math.sin(math.radians(nowangle))
+  #      Out_Y = -out[0] * math.sin(math.radians(nowangle)) + out[1] * math.cos(math.radians(nowangle))
+  #      ratio = 1.0 
+  #      #print("out now: ",Out_X, Out_Y)
+  #     # if abs(self.errornow[0])>self.ErrorMargin or abs(self.errornow[1])>self.ErrorMargin:
+  #     #     error_rate = abs(self.errornow[0]) if abs(self.errornow[0]) > self.ErrorMargin else abs(self.errornow[1])
+  #     #     if error_rate > self.Max_error:
+  #     #         error_rate = self.Max_error
+  #     #     ratio = (ratio - self.ErrorMargin*(self.MaxRatio - ratio)/(self.Max_error - self.ErrorMargin))+\
+  #     #             ((self.MaxRatio - ratio)/(self.Max_error - self.ErrorMargin))*error_rate
+  #     # Out_X = Out_X*ratio
+  #     # Out_Y = Out_Y*ratio
+
+  #      if abs(Out_X)>self.SpdLimit or abs(Out_Y)> self.SpdLimit:
+  #          Cpsratio = self.SpdLimit/abs(Out_X) if abs(Out_X)>abs(Out_Y) else self.SpdLimit/abs(Out_Y)
+  #          Out_X = Cpsratio * Out_X
+  #          Out_Y = Cpsratio * Out_Y
+  #      #print("out after transfrom: ", Out_X, Out_Y)
+  #      return Out_X, Out_Y
+
+    def getspeed(self, nowpos, dtime):
+        
+        if self.oldpos is not None:
+            try:
+                length = (nowpos-self.oldpos)    # cm/s
+                self.speed = length / dtime
+                for index, value in enumerate(self.speed):
+                    if value > self.MaxSpeed:
+                        self.speed[index] = self.MaxSpeed
+                    if value < -self.MaxSpeed:
+                        self.speed[index] = - self.MaxSpeed
+            
+            except:
+                print("dtime is zero!!")
+        self.oldpos = nowpos
+        #print("speed now : ", self.speed)
+        return self.speed
+
+    def sameAngleAutoflytoXY(self,nowpos, nowspeed, nowangle, targetpos):
         #print(nowpos, targetpos, nowpos-targetpos)
         #print(self.Drone)
         errorlist = targetpos - nowpos
-        out = self.pidCtl(errorlist)
-
+        out = self.pidCtl(errorlist,nowspeed)
+        #print("out: " , out)
         Out_X = out[0] * math.cos(math.radians(nowangle)) + out[1] * math.sin(math.radians(nowangle))
         Out_Y = -out[0] * math.sin(math.radians(nowangle)) + out[1] * math.cos(math.radians(nowangle))
         ratio = 1.0 
@@ -73,8 +122,6 @@ class autopiolot():
             Out_Y = Cpsratio * Out_Y
         #print("out after transfrom: ", Out_X, Out_Y)
         return Out_X, Out_Y
-
-
 
 # input:  position now and target, 
 # output: pid out of z

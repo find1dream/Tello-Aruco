@@ -46,9 +46,9 @@ class DroneReg():
             #print("self.extr.I:",self.extristics.I )
             #self.worldRot = cv2.Rodrigues(self.rvec_trs)
             self.extristics_I = self.extristics.I
-            self.worldPos = np.array([round(self.extristics_I[0,3]*100,1),\
-                    round(self.extristics_I[1,3]*100,1),\
-                    round(self.extristics_I[2,3]*100,1)])
+            self.worldPos = np.array([round(self.extristics_I[0,3]*100,2),\
+                    round(self.extristics_I[1,3]*100,2),\
+                    round(self.extristics_I[2,3]*100,2)])
             self.worldRotM = np.zeros(shape=(3,3))
             cv2.Rodrigues(self.rvec, self.worldRotM,  jacobian = 0 )
             self.worldRot = cv2.RQDecomp3x3(self.worldRotM)

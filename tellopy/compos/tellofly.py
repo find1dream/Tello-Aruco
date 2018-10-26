@@ -102,104 +102,127 @@ def main():
         finishedNum = 0
         completeflg = False
         targe = np.array([120, 120, 100])
-
+        TimeStart = 0
+        TimeEnd = 0
+        speedNow = np.array([0.0,0.0,0.0])
+        frame = None
+        frameold = None
         while run_recv_thread:
             if frameA is None :
                 time.sleep(0.01)
             else:
                 #---------show frame start-------------------------------#
-                TimeStart = datetime.now()
+                #TimeStart = datetime.now()
                 frameCount += 1
+                framold = frame
                 frame = frameA
-                im = np.array(frame.to_image())
-                image = cv2.flip(im, 0)
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                #image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-                
-                #cv2.imshow('Original', image)
-                DroneVideo.findARMarker(image)
-                DroneVideo.estimatePos()
-                q = drone.quater
-                euler = euler_from_quaternion(q) 
+                if frame != frameold:
+                   im = np.array(frame.to_image())
+                   image = cv2.flip(im, 0)
+                   image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                   #image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+                   
+                   #cv2.imshow('Original', image)
+                   DroneVideo.findARMarker(image)
+                   DroneVideo.estimatePos()
+                   q = drone.quater
+                   euler = euler_from_quaternion(q) 
 
-                euler = np.array([math.degrees(euler[1]),math.degrees(euler[2]),math.degrees(euler[0])])
-                print("euler: ", euler)
-                aTimeEnd = datetime.now()
-                aalltime  = aTimeEnd - TimeStart
-                #$print(DroneVideo.getARPoint2())
-                #DroneVideo.show()
-                if flyflag == True:
-                    #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
-                    #        target[1]) < 3 else False
-                    #DroneVideo.worldPos = np.array([20,4, 10])
-                    #AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, 2,target)
-                    finishedNum, targe = cirfly.fly(finishedNum, DroneVideo.worldPos)
-                    AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, DroneVideo.worldRot[0][2],targe)
-                    if finishedNum != 3:
-                        drone.flytoXYZ(AdjustX, AdjustY,0)
-                    else:
-                        drone.flytoXYZ(0,0,0)
-                    #drone.forward(AdjustY)
-                    print("adjust: ",AdjustX, AdjustY)
-                    #if targetAchived == True:
-                    #    count += 1
-                    #    if count % 2 == 1:
-                    #        target = [15, 15, 15]
-                    #    else:
-                    #        target = [2,2,2]
-                key = cv2.waitKey(1)
-                if key & 0xFF == ord ('j'):
-                    drone.down(20)
-                if key & 0xFF == ord ('q'):
-                    drone.up(20)
-                elif key & 0xFF == ord ('k'):
-                    drone.down(0)
-                elif key & 0xFF == ord ('a'):
-                    flyflag = True
-                elif key & 0xFF == ord ('o'):
-                    drone.clockwise(40)
-                elif key & 0xFF == ord ('b'):
-                    targe= np.array([120,120,120])
-                    
-                elif key & 0xFF == ord ('m'):
-                    targe= np.array([40,40,40])
-                
-                elif key & 0xFF == ord ('p'):
-                    autofly.Dronefly_P += 0.1
-                elif key & 0xFF == ord ('y'):
-                    autofly.Dronefly_P -= 0.1
+                   euler = np.array([math.degrees(euler[1]),math.degrees(euler[2]),math.degrees(euler[0])])
+                   #print("euler: ", euler)
+                   #print("angle: " , round(drone.gyro[0]*100),round(drone.gyro[1]*100),round(drone.gyro[2]*100))
+                   #print("acc: " , round(drone.acce[0]*100),round(drone.acce[1]*100),round(drone.acce[2]*100))
+                   #print("speed: ", drone.vel)
+                   #aTimeEnd = datetime.now()
+                   #aalltime  = aTimeEnd - TimeStart
+                   #$print(DroneVideo.getARPoint2())
+                   DroneVideo.show()
+                   if flyflag == True:
+                       #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
+                       #        target[1]) < 3 else False
+                       #DroneVideo.worldPos = np.array([20,4, 10])
+                       #AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, 2,target)
 
-                elif key & 0xFF == ord ('f'):
-                    autofly.Dronefly_D += 0.2
-                elif key & 0xFF == ord ('g'):
-                    autofly.Dronefly_D -= 0.2
+                       #finishedNum, targe = cirfly.fly(finishedNum, DroneVideo.worldPos)
+                       TimeEnd = datetime.now()
+                       if TimeStart != 0:
+                           speedNow = autofly.getspeed(DroneVideo.worldPos, (TimeEnd - TimeStart).total_seconds())
+                       TimeStart = datetime.now()
+                       targe = np.array([100,100,100])
+                       AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, speedNow, DroneVideo.worldRot[0][2],targe)
+                       drone.flytoXYZ(AdjustX, AdjustY, 0)
+                       #if finishedNum != 3:
+                       #    drone.flytoXYZ(AdjustX, AdjustY,0)
+                       #else:
+                       #    drone.flytoXYZ(0,0,0)
+                       #drone.forward(AdjustY)
+                       print("adjust: ",AdjustX, AdjustY)
+                       #if targetAchived == True:
+                       #    count += 1
+                       #    if count % 2 == 1:
+                       #        target = [15, 15, 15]
+                       #    else:
+                       #        target = [2,2,2]
+                   key = cv2.waitKey(1)
+                   if key & 0xFF == ord ('j'):
+                       drone.down(20)
+                   if key & 0xFF == ord ('q'):
+                       drone.up(20)
+                   elif key & 0xFF == ord ('k'):
+                       drone.down(0)
+                   elif key & 0xFF == ord ('a'):
+                       flyflag = True
+                   elif key & 0xFF == ord ('o'):
+                       drone.clockwise(40)
+                   elif key & 0xFF == ord ('b'):
+                       targe= np.array([120,120,120])
+                       
+                   elif key & 0xFF == ord ('m'):
+                       targe= np.array([40,40,40])
+                   
+                   elif key & 0xFF == ord ('p'):
+                       autofly.Dronefly_P += 0.1
+                   elif key & 0xFF == ord ('y'):
+                       autofly.Dronefly_P -= 0.1
 
-                elif key & 0xFF == ord ('e'):
-                    autofly.SpdLimit += 2.0
-                elif key & 0xFF == ord ('u'):
-                    autofly.SpdLimit -= 2.0
+                   elif key & 0xFF == ord ('f'):
+                       autofly.Dronefly_D += 0.2
+                   elif key & 0xFF == ord ('g'):
+                       autofly.Dronefly_D -= 0.2
 
-                elif key & 0xFF == ord ('o'):
-                    drone.counter_clockwise(20)
-                elif key & 0xFF == ord ('s'):
-                    drone.counter_clockwise(0)
-                    drone.forward(0)
-                    drone.right(0)
-                elif key & 0xFF == ord ('h'):
-                    drone.takeoff()
-                elif key & 0xFF == ord ('d'):
-                    drone.land()
-                    flyflag = False
-                elif key & 0xFF == ord('t'):
-                    cv2.imwrite (str(frameCount) + ".png", image)
-                #test fly
+                   elif key & 0xFF == ord ('c'):
+                       autofly.DroneSpeed_P += 0.1
+                   elif key & 0xFF == ord ('r'):
+                       autofly.DroneSpeed_P -= 0.1
 
-               # if cv2.waitKey(5) & 0xFF == ord ('q'):
-                #---------show frame end---------------------------------#
-                #print("debug: got frame")
-                TimeEnd = datetime.now()
-                alltime  = TimeEnd - TimeStart
-                #print("all time: ",int(alltime.total_seconds()*1000),"ms", " aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
+                   elif key & 0xFF == ord ('e'):
+                       autofly.SpdLimit += 2.0
+                   elif key & 0xFF == ord ('u'):
+                       autofly.SpdLimit -= 2.0
+
+                   elif key & 0xFF == ord ('o'):
+                       drone.counter_clockwise(20)
+                   elif key & 0xFF == ord ('s'):
+                       drone.counter_clockwise(0)
+                       drone.forward(0)
+                       drone.right(0)
+                   elif key & 0xFF == ord ('h'):
+                       drone.takeoff()
+                   elif key & 0xFF == ord ('d'):
+                       drone.land()
+                       flyflag = False
+                   elif key & 0xFF == ord('t'):
+                       cv2.imwrite (str(frameCount) + ".png", image)
+                   #test fly
+
+                   print("limit: ",autofly.SpdLimit,"speed_P", autofly.DroneSpeed_P,"P",autofly.Dronefly_P\
+                           ,"D", autofly.Dronefly_D)
+                  # if cv2.waitKey(5) & 0xFF == ord ('q'):
+                   #---------show frame end---------------------------------#
+                   #print("debug: got frame")
+                   #TimeEnd = datetime.now()
+                   #alltime  = TimeEnd - TimeStart
+                   #print("all time: ",int(alltime.total_seconds()*1000),"ms", " aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
 
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
