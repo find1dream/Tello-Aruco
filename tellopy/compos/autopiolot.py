@@ -3,16 +3,17 @@ import numpy as np
 from collections import deque
 class autopiolot():
     def __init__(self):
-        self.Dronefly_P = 7.5
-        self.Dronefly_D = 25.0  #1 10
-        self.SpdLimit = 99
+        self.Dronefly_P = 1.4
+        self.Dronefly_I = 0.25
+        self.Dronefly_D = 15.0  #1 10
+        self.SpdLimit = 80
         self.Max_XY = 50
         self.oldpos = None
         self.ErrorMargin = 15
         self.Max_error = 50
-        self.DroneSpeed_P = 0.17
-        self.DroneSpeed_D = 0.0
-        self.MaxSpeed = 300   #max speed is 300cm/s
+        self.DroneSpeed_P = 0.45
+        self.DroneSpeed_D = 1.1
+        self.MaxSpeed = 200   #max speed is 200cm/s
         self.TargetSpd = 2
         self.MaxRatio = 3
         self.speed = np.array([0.0,0.0,0.0])
@@ -20,18 +21,20 @@ class autopiolot():
         self.errornow  = np.array([0.0, 0.0, 0.0])
         self.derrordeque = deque([[0.0,0.0,0.0]])
         self.derror = np.array([0.0,0.0,0.0])
+        self.ierror = np.array([0.0,0.0,0.0])
+        self.Max_ierror = 100
         self.MaxErrorRate = 10
         self.MaxDErrorRate = 8
 
-    def pidCtl(self,errorlist, nowspeed):
+    def pidCtl(self,errorlist, nowspeed,dspeed):
         self.datafilter(errorlist)
         #print(errorlist, self.errorpast, self.errornow, self.derror)
         out_refSpd = self.Dronefly_P * self.errornow + self.Dronefly_D * self.derror
         #print("drone para",self.Dronefly_P, self.Dronefly_D,"outP:", self.Dronefly_P *self.errornow,\
         #        "outD:", self.Dronefly_D*self.derror)
         #print("out_refSpd: ", out_refSpd)
-        out_spd = self.DroneSpeed_P * (out_refSpd - nowspeed)
-        return out_spd
+        out_spd = self.DroneSpeed_P * (out_refSpd - nowspeed) + self.DroneSpeed_D * dspeed
+        return out_spd,out_refSpd
     
     def datafilter(self,errorlist):
         self.errorpast = self.errornow
@@ -46,6 +49,14 @@ class autopiolot():
             if value < -self.MaxDErrorRate:
                 derror[index] = - self.MaxDErrorRate
         self.derror = derror
+
+        self.ierror += self.errornow
+
+        for index, value in enumerate(self.ierror):
+            if value > self.MaxDErrorRate:
+                self.ierror[index] = self.Max_ierror
+            if value < -self.MaxDErrorRate:
+                self.ierror[index] = - self.Max_ierror
         #print("derror: ", self.derror)
         self.derrordeque.append(derror)
         if len(self.derrordeque) > 5:
@@ -84,6 +95,7 @@ class autopiolot():
         if self.oldpos is not None:
             try:
                 length = (nowpos-self.oldpos)    # cm/s
+                #print("length: ", length)
                 self.speed = length / dtime
                 for index, value in enumerate(self.speed):
                     if value > self.MaxSpeed:
@@ -94,14 +106,14 @@ class autopiolot():
             except:
                 print("dtime is zero!!")
         self.oldpos = nowpos
-        #print("speed now : ", self.speed)
+        print("speed now : ", self.speed)
         return self.speed
 
-    def sameAngleAutoflytoXY(self,nowpos, nowspeed, nowangle, targetpos):
+    def sameAngleAutoflytoXY(self,nowpos, nowspeed, dspeed, nowangle, targetpos):
         #print(nowpos, targetpos, nowpos-targetpos)
         #print(self.Drone)
         errorlist = targetpos - nowpos
-        out = self.pidCtl(errorlist,nowspeed)
+        out,refspd = self.pidCtl(errorlist,nowspeed,dspeed)
         #print("out: " , out)
         Out_X = out[0] * math.cos(math.radians(nowangle)) + out[1] * math.sin(math.radians(nowangle))
         Out_Y = -out[0] * math.sin(math.radians(nowangle)) + out[1] * math.cos(math.radians(nowangle))
@@ -121,15 +133,13 @@ class autopiolot():
             Out_X = Cpsratio * Out_X
             Out_Y = Cpsratio * Out_Y
         #print("out after transfrom: ", Out_X, Out_Y)
-        return Out_X, Out_Y
+        return Out_X, Out_Y, refspd
 
 # input:  position now and target, 
 # output: pid out of z
 def sameAngleAutoflytoHeight(nowpos,targetpos):
     ErrorZ = targetpos[0] - nowpos[0]
     Out_Z = 0
-    if (abs(ErrorZ) >2):
-        Out_Z = ErrorZ * Dronefly_P
     return Out_Z
 
 
