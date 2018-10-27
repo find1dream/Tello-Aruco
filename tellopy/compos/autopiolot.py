@@ -3,16 +3,16 @@ import numpy as np
 from collections import deque
 class autopiolot():
     def __init__(self):
-        self.Dronefly_P = 1.4
-        self.Dronefly_I = 0.25
+        self.Dronefly_P = 1.57
+        self.Dronefly_I = 0.15
         self.Dronefly_D = 15.0  #1 10
-        self.SpdLimit = 80
+        self.SpdLimit = 90
         self.Max_XY = 50
         self.oldpos = None
         self.ErrorMargin = 15
         self.Max_error = 50
-        self.DroneSpeed_P = 0.45
-        self.DroneSpeed_D = 1.1
+        self.DroneSpeed_P = 0.27
+        self.DroneSpeed_D = -1.2
         self.MaxSpeed = 200   #max speed is 200cm/s
         self.TargetSpd = 2
         self.MaxRatio = 3
@@ -33,7 +33,11 @@ class autopiolot():
         #print("drone para",self.Dronefly_P, self.Dronefly_D,"outP:", self.Dronefly_P *self.errornow,\
         #        "outD:", self.Dronefly_D*self.derror)
         #print("out_refSpd: ", out_refSpd)
-        out_spd = self.DroneSpeed_P * (out_refSpd - nowspeed) + self.DroneSpeed_D * dspeed
+        spderror = out_refSpd - nowspeed
+        for index, value in enumerate(spderror):
+            if value < 10 and value > -10:
+                spderror[index] = 0
+        out_spd = self.DroneSpeed_P * (spderror ) + self.DroneSpeed_D * dspeed
         return out_spd,out_refSpd
     
     def datafilter(self,errorlist):
