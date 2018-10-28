@@ -8,7 +8,7 @@ while True:
     # Capture frame-by-frame
     ret, frame = video_capture.read()
     i += 1
-    if cv2.waitKey(30) == 27:
+    if cv2.waitKey(1) & 0xFF == ord('t'):
         cv2.imwrite(str(i)+".png", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
