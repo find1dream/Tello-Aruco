@@ -62,7 +62,7 @@ def recv_thread():
         print("debug: ready to receive video frames...")
         for f in container.decode(video=0):
             frameA = f
-            time.sleep(0.0001)
+            time.sleep(0.001)
 
     
             #if DroneVideo.worldPos is not None:
@@ -88,13 +88,13 @@ def msg_thread():
 targe = np.array([120, 120, 100])
 def timer_thread():
     global targe
-    next_call = time.time()
     cirfly = circlefly(60,400)
     fnum = 0
     t = 0
     tx = 0.27
     ty = 0.20
     tz = 0.15
+    next_call = time.time()
     while True:
         t += 0.015
         A = 1.5*(abs(math.sin(0.01*t)))
@@ -104,8 +104,10 @@ def timer_thread():
         targe = np.array([x,y,z])*100
         #fnum, targe = cirfly.fly(fnum)
         #print("targe: ", targe)
-        next_call = next_call + 0.02;
-        time.sleep(next_call - time.time())
+        next_call = next_call + 0.01;
+        #leng = next_call - time.time()
+        #print("length: ", leng)
+        time.sleep(0.01)
 
 
 def main():
@@ -117,8 +119,8 @@ def main():
         DroneVideo = DroneReg()
         frameCount = 0
         threading.Thread(target = recv_thread).start()
-        threading.Thread(target = msg_thread).start()
-        threading.Thread(target = timer_thread).start()
+        #threading.Thread(target = msg_thread).start()
+        #threading.Thread(target = timer_thread).start()
         count = 0
         aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
         cv2.imshow("result", aa)
@@ -142,7 +144,7 @@ def main():
                 else:
                     #---------show frame start-------------------------------#
                     #TimeStart = datetime.now()
-                    frameCount += 1
+                    #frameCount += 1
                     frame = frameA
                     if frame.__hash__ == frameold:
                         pass
@@ -181,14 +183,14 @@ def main():
                            q = drone.quater
                            euler = euler_from_quaternion(q) 
                            euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
-                           #print("targe: ", targe)
+                           print("targe: ", targe)
                            #print("euler: ",euler)
-                           writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
-                                            euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
+                         #  writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
+                         #                   euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
 
-                                            round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
-                                            targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
-                                            0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
+                         #                   round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
+                         #                   targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
+                         #                   0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
                            #print("adjust: ",AdjustX, AdjustY)
                            #if targetAchived == True:
                            #    count += 1
