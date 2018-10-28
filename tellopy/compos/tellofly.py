@@ -119,8 +119,8 @@ def main():
         DroneVideo = DroneReg()
         frameCount = 0
         threading.Thread(target = recv_thread).start()
-        #threading.Thread(target = msg_thread).start()
-        #threading.Thread(target = timer_thread).start()
+        threading.Thread(target = msg_thread).start()
+        threading.Thread(target = timer_thread).start()
         count = 0
         aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
         cv2.imshow("result", aa)
@@ -185,12 +185,12 @@ def main():
                            euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
                            print("targe: ", targe)
                            #print("euler: ",euler)
-                         #  writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
-                         #                   euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
+                           writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
+                                            euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
 
-                         #                   round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
-                         #                   targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
-                         #                   0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
+                                            round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
+                                            targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
+                                            0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
                            #print("adjust: ",AdjustX, AdjustY)
                            #if targetAchived == True:
                            #    count += 1
