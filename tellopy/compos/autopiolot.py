@@ -3,15 +3,15 @@ import numpy as np
 from collections import deque
 class autopiolot():
     def __init__(self):
-        self.Dronefly_P = 1.57
-        self.Dronefly_I = 0.15
+        self.Dronefly_P = 1.96
+        self.Dronefly_I = 0.18
         self.Dronefly_D = 15.0  #1 10
-        self.SpdLimit = 90
+        self.SpdLimit = 94
         self.Max_XY = 50
         self.oldpos = None
         self.ErrorMargin = 15
         self.Max_error = 50
-        self.DroneSpeed_P = 0.27
+        self.DroneSpeed_P = 0.60
         self.DroneSpeed_D = -1.2
         self.MaxSpeed = 200   #max speed is 200cm/s
         self.TargetSpd = 2

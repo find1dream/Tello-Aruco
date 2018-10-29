@@ -421,11 +421,14 @@ class Tello(object):
 
     def __send_stick_command(self):
         pkt = Packet(STICK_CMD, 0x60)
-
-        axis1 = int(1024 + 660.0 * self.right_x) & 0x7ff
-        axis2 = int(1024 + 660.0 * self.right_y) & 0x7ff
-        axis3 = int(1024 + 660.0 * self.left_y) & 0x7ff
-        axis4 = int(1024 + 660.0 * self.left_x) & 0x7ff
+        
+        self.speed = 1.0
+        axis1 = int(1024 + 660.0 * self.right_x) 
+        axis2 = int(1024 + 660.0 * self.right_y) 
+        axis3 = int(1024 + 660.0 * self.left_y) 
+        axis4 = int(1024 + 660.0 * self.left_x) 
+        axis5 = int(1024 + 660.0 * self.speed) 
+        axis5 = 0x7fff
         '''
         11 bits (-1024 ~ +1023) x 4 axis = 44 bits
         44 bits will be packed in to 6 bytes (48 bits)
@@ -437,16 +440,25 @@ class Tello(object):
          |       |       |       |       |       |       |
              byte5   byte4   byte3   byte2   byte1   byte0
         '''
-        log.debug("stick command: yaw=%4d thr=%4d pit=%4d rol=%4d" %
-                  (axis4, axis3, axis2, axis1))
-        log.debug("stick command: yaw=%04x thr=%04x pit=%04x rol=%04x" %
-                  (axis4, axis3, axis2, axis1))
-        pkt.add_byte(((axis2 << 11 | axis1) >> 0) & 0xff)
-        pkt.add_byte(((axis2 << 11 | axis1) >> 8) & 0xff)
-        pkt.add_byte(((axis3 << 11 | axis2) >> 5) & 0xff)
-        pkt.add_byte(((axis4 << 11 | axis3) >> 2) & 0xff)
-        pkt.add_byte(((axis4 << 11 | axis3) >> 10) & 0xff)
-        pkt.add_byte(((axis4 << 11 | axis3) >> 18) & 0xff)
+        packedAxis = (axis1 & 0x7FF) | ((axis2 & 0x7FF) << 11) | ((0x7FF & axis3) <<22) | ((0x7FF&axis4)<< 33)| (axis5 << 44)
+        pkt.add_byte((packedAxis >> 0) & 0x00000000ff)
+        pkt.add_byte((packedAxis >> 8) & 0x00000000ff)
+        pkt.add_byte((packedAxis >> 16) & 0x00000000ff)
+
+        pkt.add_byte((packedAxis >> 24) & 0x00000000ff)
+        pkt.add_byte((packedAxis >> 32) & 0x00000000ff)
+        pkt.add_byte((packedAxis >> 40) & 0x00000000ff)
+       # log.debug("stick command: yaw=%4d thr=%4d pit=%4d rol=%4d" %
+       #           (axis4, axis3, axis2, axis1))
+       # log.debug("stick command: yaw=%04x thr=%04x pit=%04x rol=%04x" %
+       #           (axis4, axis3, axis2, axis1))
+       # pkt.add_byte(((axis2 << 11 | axis1) >> 0) & 0xff)
+       # pkt.add_byte(((axis2 << 11 | axis1) >> 8) & 0xff)
+       # pkt.add_byte(((axis3 << 11 | axis2) >> 5) & 0xff)
+       # pkt.add_byte(((axis4 << 11 | axis3) >> 2) & 0xff)
+       # pkt.add_byte(((axis4 << 11 | axis3) >> 10) & 0xff)
+       # pkt.add_byte(((axis4 << 11 | axis3) >> 18) & 0xff)
+        #pkt.add_byte()
         pkt.add_time()
         pkt.fixup()
         log.debug("stick command: %s" % byte_to_hexstring(pkt.get_buffer()))

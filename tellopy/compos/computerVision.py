@@ -18,13 +18,13 @@ class DroneReg():
         self.parameters =  self.aruco.DetectorParameters_create()
         self.parameters.cornerRefinementMethod = self.aruco.CORNER_REFINE_CONTOUR
 
-        #board = aruco.GridBoard_create(5, 7, 0.033, 0.0035, dictionary) 
+        #self.board = self.aruco.GridBoard_create(5, 7, 0.033, 0.0035, self.dictionary) 
         self.board = self.aruco.GridBoard_create(8, 8,0.1515, 0.0585, self.dictionary) 
 
     def findARMarker(self,frame):
         self.frame =  frame
         self.corners, self.ids, self.rejectedImgPoints = self.aruco.detectMarkers(self.frame, self.dictionary)
-        #aruco.drawDetectedMarkers(self.frame, self.corners, self.ids, (0,255,0))
+        self.aruco.drawDetectedMarkers(self.frame, self.corners, self.ids, (0,255,0))
 
     def show(self):
         cv2.imshow("result", self.frame)
@@ -52,14 +52,15 @@ class DroneReg():
             self.worldRotM = np.zeros(shape=(3,3))
             cv2.Rodrigues(self.rvec, self.worldRotM,  jacobian = 0 )
             self.worldRot = cv2.RQDecomp3x3(self.worldRotM)
+            #self.worldRot[0][2] += 94
 
             #self.worldPos = - self.tvec * self.rvec_trs 
             #print( self.tvec, self.rvec)
             #self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
-            #print("X:%.0f " % (self.worldPos[0]),\
-            #        "Y:%.0f "% (self.worldPos[1]),\
-            #        "Z:%.0f "% (self.worldPos[2]),\
-            #        "rot:%.0f "% (self.worldRot[0][2]))
+            print("X:%.0f " % (self.worldPos[0]),\
+                    "Y:%.0f "% (self.worldPos[1]),\
+                    "Z:%.0f "% (self.worldPos[2]),\
+                    "rot:%.0f "% (self.worldRot[0][2]))
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = self.aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)
