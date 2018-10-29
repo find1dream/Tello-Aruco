@@ -97,7 +97,7 @@ def timer_thread():
     next_call = time.time()
     while True:
         t += 0.015
-        A = 1.5*(abs(math.sin(0.01*t)))
+        A = 1.5   #*(abs(math.sin(0.005*t)))
         x = A*abs(math.sin(tx*t))+0.1
         y = A*abs(math.sin(ty*t))+0.1
         z = A*abs(math.sin(tz*t))+0.1
@@ -107,7 +107,7 @@ def timer_thread():
         next_call = next_call + 0.01;
         #leng = next_call - time.time()
         #print("length: ", leng)
-        time.sleep(0.01)
+        time.sleep(0.015)
 
 
 def main():
@@ -120,7 +120,7 @@ def main():
         frameCount = 0
         #threading.Thread(target = recv_thread).start()
         threading.Thread(target = msg_thread).start()
-        #threading.Thread(target = timer_thread).start()
+        threading.Thread(target = timer_thread).start()
         count = 0 
         aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
         cv2.imshow("result", aa)
@@ -132,13 +132,19 @@ def main():
         speedNow = np.array([0.0,0.0,0.0])
         frame = frameA
         frameold = None
-        Cap = cv2.VideoCapture(0)
+        Cap = cv2.VideoCapture(1)
         drone.connect()
         drone.wait_for_connection(60.0)
         drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
         #drone.set_video_encoder_rate(4)
         drone.set_loglevel(drone.LOG_WARN)
-        while True:
+        with open('result.csv','w') as csvfile:
+             writer = csv.writer(csvfile)
+             writer.writerow(['posx','posy','posz','velx','vely','velz','angx'\
+                              ,'angy','angz','gyrx','gyry','gryz','accx','accy','accz',\
+                             'tposx','tposy','tposz','tvelx','tvely','tvelz','tangx'\
+                              ,'tangy','tangz','tgyrx','tgyry','tgryz','taccx','taccy','taccz' ])
+             while True:
                 _, frame = Cap.read()
                 
                 if frame is frameold:
@@ -177,12 +183,12 @@ def main():
                        euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
                        print("targe: ", targe)
                        #print("euler: ",euler)
-                      # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
-                      #                  euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
+                       writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
+                                        euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
 
-                      #                  round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
-                      #                  targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
-                      #                  0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
+                                        round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
+                                        targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
+                                        0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
                        #print("adjust: ",AdjustX, AdjustY)
                        #if targetAchived == True:
                        #    count += 1
@@ -205,7 +211,7 @@ def main():
                        targe= np.array([150,150,120])
                        
                    elif key & 0xFF == ord ('m'):
-                       targe= np.array([30,30,40])
+                       targe= np.array([20,50,40])
                    
                    elif key & 0xFF == ord ('p'):
                        autofly.Dronefly_P += 0.03

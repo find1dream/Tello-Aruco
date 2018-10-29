@@ -4,15 +4,15 @@ from collections import deque
 class autopiolot():
     def __init__(self):
         self.Dronefly_P = 1.96
-        self.Dronefly_I = 0.18
+        self.Dronefly_I = 0.23
         self.Dronefly_D = 15.0  #1 10
-        self.SpdLimit = 94
+        self.SpdLimit = 99
         self.Max_XY = 50
         self.oldpos = None
         self.ErrorMargin = 15
         self.Max_error = 50
-        self.DroneSpeed_P = 0.60
-        self.DroneSpeed_D = -1.2
+        self.DroneSpeed_P = 0.58
+        self.DroneSpeed_D = -1.5
         self.MaxSpeed = 200   #max speed is 200cm/s
         self.TargetSpd = 2
         self.MaxRatio = 3
