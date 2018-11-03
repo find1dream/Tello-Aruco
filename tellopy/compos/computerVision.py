@@ -1,13 +1,8 @@
 import cv2
-import math
-import sys
 import numpy as np
-from math import *
-import traceback
-import av
-import time
-import threading
-from datetime import datetime
+#import time
+#from datetime import datetime
+
 class DroneReg():
     def __init__(self):
         self.worldPos = None
@@ -57,10 +52,10 @@ class DroneReg():
             #self.worldPos = - self.tvec * self.rvec_trs 
             #print( self.tvec, self.rvec)
             #self.worldPos = [self.worldPos[0][0],self.worldPos[1][1],  self.worldPos[2][2]]
-            print("X:%.0f " % (self.worldPos[0]),\
-                    "Y:%.0f "% (self.worldPos[1]),\
-                    "Z:%.0f "% (self.worldPos[2]),\
-                    "rot:%.0f "% (self.worldRot[0][2]))
+           # print("X:%.0f " % (self.worldPos[0]),\
+           #         "Y:%.0f "% (self.worldPos[1]),\
+           #         "Z:%.0f "% (self.worldPos[2]),\
+           #         "rot:%.0f "% (self.worldRot[0][2]))
             #self.rvec, self.tvec, _ = aruco.estimatePoseSingleMarkers(self.corners[0], arucoMarkerLength, self.cameraMatrix, self.distanceCoefficients)
             if self.retval != 0:
                 self.frame = self.aruco.drawAxis(self.frame, self.cameraMatrix, self.distanceCoefficients, self.rvec, self.tvec, 0.1)

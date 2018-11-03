@@ -26,6 +26,13 @@ class autopiolot():
         self.MaxErrorRate = 10
         self.MaxDErrorRate = 8
 
+
+        self.angError = 0.0
+        self.angPast = 0
+        self.targetAngle = 0.5
+        self.DroneAng_P = 330.0
+        self.DroneAng_D = 800.0
+
     def pidCtl(self,errorlist, nowspeed,dspeed):
         self.datafilter(errorlist)
         #print(errorlist, self.errorpast, self.errornow, self.derror)
@@ -112,6 +119,17 @@ class autopiolot():
         self.oldpos = nowpos
         print("speed now : ", self.speed)
         return self.speed
+
+    def turnToangle(self, angleNow):
+        self.angPast = self.angError
+        self.angError = self.targetAngle - angleNow
+        out = self.DroneAng_P * self.angError + self.DroneAng_D * (self.angError - self.angPast)
+        if out > 100:
+            out = 100
+        elif out < -100:
+            out = -100
+        return out
+        
 
     def sameAngleAutoflytoXY(self,nowpos, nowspeed, dspeed, nowangle, targetpos):
         #print(nowpos, targetpos, nowpos-targetpos)
