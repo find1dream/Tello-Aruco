@@ -132,7 +132,7 @@ def main():
         speedNow = np.array([0.0,0.0,0.0])
         frame = frameA
         frameold = None
-        Cap = cv2.VideoCapture(1)
+        Cap = cv2.VideoCapture(0)
         drone.connect()
         drone.wait_for_connection(60.0)
         drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
@@ -161,7 +161,7 @@ def main():
                    #aTimeEnd = datetime.now()
                    #aalltime  = aTimeEnd - TimeStart
                    #$print(DroneVideo.getARPoint2())
-                   #DroneVideo.show()
+                   DroneVideo.show()
                    if flyflag == True:
                        #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
                        #        target[1]) < 3 else False
@@ -183,12 +183,12 @@ def main():
                        euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
                        print("targe: ", targe)
                        #print("euler: ",euler)
-                       writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
-                                        euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
+                      # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
+                      #                  euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
 
-                                        round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
-                                        targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
-                                        0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
+                      #                  round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
+                      #                  targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
+                      #                  0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
                        #print("adjust: ",AdjustX, AdjustY)
                        #if targetAchived == True:
                        #    count += 1
