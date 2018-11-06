@@ -4,7 +4,7 @@ from collections import deque
 class autopiolot():
     def __init__(self):
         self.Dronefly_P = 1.96
-        self.Dronefly_I = 0.23
+        self.Dronefly_I = 0.17
         self.Dronefly_D = 15.0  #1 10
         self.SpdLimit = 99
         self.Max_XY = 50
@@ -26,18 +26,29 @@ class autopiolot():
         self.MaxErrorRate = 10
         self.MaxDErrorRate = 8
 
+
+        self.angError = 0.0
+        self.angPast = 0
+        self.targetAngle = 0.5
+        self.DroneAng_P = 330.0
+        self.DroneAng_D = 800.0
+
     def pidCtl(self,errorlist, nowspeed,dspeed):
         self.datafilter(errorlist)
         #print(errorlist, self.errorpast, self.errornow, self.derror)
-        out_refSpd = self.Dronefly_P * self.errornow + self.Dronefly_D * self.derror
+        #ref_pout = self.Dronefly_P * self.errornow 
+        #ref_dout = self.Dronefly_D 
+        out_refSpd = self.Dronefly_P * self.errornow + self.Dronefly_I*self.ierror + self.Dronefly_D * self.derror
         #print("drone para",self.Dronefly_P, self.Dronefly_D,"outP:", self.Dronefly_P *self.errornow,\
         #        "outD:", self.Dronefly_D*self.derror)
         #print("out_refSpd: ", out_refSpd)
         spderror = out_refSpd - nowspeed
         for index, value in enumerate(spderror):
-            if value < 10 and value > -10:
+            if value < 1 and value > -1:
                 spderror[index] = 0
+        dspeed[2]+= 99.74
         out_spd = self.DroneSpeed_P * (spderror ) + self.DroneSpeed_D * dspeed
+        print(out_spd, errorlist, self.ierror)
         return out_spd,out_refSpd
     
     def datafilter(self,errorlist):
@@ -57,9 +68,9 @@ class autopiolot():
         self.ierror += self.errornow
 
         for index, value in enumerate(self.ierror):
-            if value > self.MaxDErrorRate:
+            if value > self.Max_ierror:
                 self.ierror[index] = self.Max_ierror
-            if value < -self.MaxDErrorRate:
+            if value < -self.Max_ierror:
                 self.ierror[index] = - self.Max_ierror
         #print("derror: ", self.derror)
         self.derrordeque.append(derror)
@@ -110,10 +121,21 @@ class autopiolot():
             except:
                 print("dtime is zero!!")
         self.oldpos = nowpos
-        print("speed now : ", self.speed)
+        #print("speed now : ", self.speed)
         return self.speed
 
-    def sameAngleAutoflytoXY(self,nowpos, nowspeed, dspeed, nowangle, targetpos):
+    def turnToangle(self, angleNow):
+        self.angPast = self.angError
+        self.angError = self.targetAngle - angleNow
+        out = self.DroneAng_P * self.angError + self.DroneAng_D * (self.angError - self.angPast)
+        if out > 100:
+            out = 100
+        elif out < -100:
+            out = -100
+        return out
+        
+
+    def sameAngleAutoflytoXYZ(self,nowpos, nowspeed, dspeed, nowangle, targetpos):
         #print(nowpos, targetpos, nowpos-targetpos)
         #print(self.Drone)
         errorlist = targetpos - nowpos
@@ -121,8 +143,9 @@ class autopiolot():
         #print("out: " , out)
         Out_X = out[0] * math.cos(math.radians(nowangle)) + out[1] * math.sin(math.radians(nowangle))
         Out_Y = -out[0] * math.sin(math.radians(nowangle)) + out[1] * math.cos(math.radians(nowangle))
+        Out_Z = out[2]
         ratio = 1.0 
-        #print("out now: ",Out_X, Out_Y)
+        #print("out now: ",Out_X, Out_Y, Out_Z)
        # if abs(self.errornow[0])>self.ErrorMargin or abs(self.errornow[1])>self.ErrorMargin:
        #     error_rate = abs(self.errornow[0]) if abs(self.errornow[0]) > self.ErrorMargin else abs(self.errornow[1])
        #     if error_rate > self.Max_error:
@@ -136,8 +159,12 @@ class autopiolot():
             Cpsratio = self.SpdLimit/abs(Out_X) if abs(Out_X)>abs(Out_Y) else self.SpdLimit/abs(Out_Y)
             Out_X = Cpsratio * Out_X
             Out_Y = Cpsratio * Out_Y
+        if Out_Z > self.SpdLimit:
+            Out_Z = self.SpdLimit
+        elif Out_Z < -self.SpdLimit:
+            Out_Z = -self.SpdLimit
         #print("out after transfrom: ", Out_X, Out_Y)
-        return Out_X, Out_Y, refspd
+        return Out_X, Out_Y, Out_Z, refspd
 
 # input:  position now and target, 
 # output: pid out of z

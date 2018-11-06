@@ -148,11 +148,14 @@ def recv_thread():
         print("debug: ready to receive video frames...")
         for f in container.decode(video=0):
             frameA = f
-            if DroneVideo.worldPos is not None:
-                messageToUdp = DroneVideo.worldPos
-                messageToUdp = " ".join(str(x) for x in messageToUdp)
-                clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
-        time.sleep(0.01)
+           # frames = container.decode(video=0)
+           # #print(next(frames))
+           # frameA = next(frames)
+           # if DroneVideo.worldPos is not None:
+           #     messageToUdp = DroneVideo.worldPos
+           #     messageToUdp = " ".join(str(x) for x in messageToUdp)
+           #     clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
+            time.sleep(0.001)
 
 def showCamPos_thread():
     global ax

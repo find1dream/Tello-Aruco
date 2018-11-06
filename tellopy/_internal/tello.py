@@ -274,7 +274,7 @@ class Tello(object):
         
         self.right_y = y / 100.0
         self.right_x = x / 100.0
-        #self.left_y =  z / 100.0
+        self.left_y =  z / 100.0
 
     def forward(self, val):
         """Forward tells the drone to go forward. Pass in an int from 0-100."""

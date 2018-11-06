@@ -3,7 +3,7 @@ import cv2
 import math
 import sys
 import numpy as np
-import csv
+
 from math import *
 import traceback
 import tellopy
@@ -12,29 +12,22 @@ import time
 import threading
 from multiprocessing  import Process
 from collections import deque
-import socket
 from autopiolot import *
 from datetime import datetime
 from computerVision import *
 from udp_server import *
 from circlefly import *
 from transformations import *
-drone = tellopy.Tello()
-frameA = None
-run_recv_thread = True
-#udp_ip = "127.0.0.1"
-#udp_port = 5555
+from face_tracking import *
+import csv
 
-#clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-#serverSock.bind((udp_ip, udp_port))
 
 def handler(event, sender, data, **args):
     pass
-    #drone = sender
-    #if event is drone.EVENT_FLIGHT_DATA:
+    #tellostate.drone = sender
+    #if event is tellostate.drone.EVENT_FLIGHT_DATA:
     #   pass
-        #print("event is coming")
+
        #print(data.north_speed, data.east_speed, data.ground_speed)
 
 def init_logger():
@@ -45,227 +38,280 @@ def init_logger():
     logger.addHandler(handler)
     logger.setLevel(INFO)
 
-def recv_thread():
-    global frameA
-    global frameframeold
-    global run_recv_thread
-    global drone
-    print('start recv_thread()')
-    drone.connect()
-    drone.wait_for_connection(60.0)
-    drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
-    drone.set_video_encoder_rate(4)
-    drone.set_loglevel(drone.LOG_WARN)
-    container = av.open(drone.get_video_stream())
-    run_recv_thread = True
-    while run_recv_thread:
-        print("debug: ready to receive video frames...")
-        for f in container.decode(video=0):
-            frameA = f
-            time.sleep(0.001)
+# Path to frozen detection graph. This is the actual model that is used for the object detection.
+PATH_TO_CKPT = './model/frozen_inference_graph_face.pb'
 
-    
-            #if DroneVideo.worldPos is not None:
-            #    messageToUdp = DroneVideo.worldPos
-            #    messageToUdp = " ".join(str(x) for x in messageToUdp)
-            #    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
+# List of the strings that is used to add correct label for each box.
+PATH_TO_LABELS = './protos/face_label_map.pbtxt'
 
-target = np.array([120, 120, 100])
-flyflag = False
-def msg_thread():
-    global target
-    global flyflag
-    udpread = getPosData()
-    while True:
-        #print("receive data")
-        num, data = udpread.getmsg()
-        if num != 9:
-            target = data
-            print("target: ",target)
-        else:
-            flyflag = True
+class telloState():
+    def __init__(self):
+        self.flyflag = False
+        self.target = np.array([120, 120, 100])
+        self.targe = np.array([120, 120, 100])
+        self.framem = None
+        self.frameA = None
+        self.drone =  tellopy.Tello()
+        self.ifshowvideo = False
+        self.iffollow = False
+        self.Cap = cv2.VideoCapture(0)
+        self.TimeStart = 0
+        self.TimeEnd = 0
+        self.speedNow = np.array([0.0,0.0,0.0])
+        self.drone.connect()
+        self.drone.wait_for_connection(60.0)
+        self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA, handler)
+        self.drone.set_video_encoder_rate(4)
+        self.drone.set_loglevel(self.drone.LOG_WARN)
+        
+class recv_thread(threading.Thread):
+    def __init__(self, name):
+        threading.Thread.__init__(self)
+        self.name = name
+    def run (self):
+         print('start recv_thread()')
+         container = av.open(tellostate.drone.get_video_stream())
+         run_recv_thread = True
 
-targe = np.array([120, 120, 100])
-def timer_thread():
-    global targe
-    cirfly = circlefly(60,400)
-    fnum = 0
-    t = 0
-    tx = 0.27
-    ty = 0.20
-    tz = 0.15
-    next_call = time.time()
-    while True:
-        t += 0.015
-        A = 1.5   #*(abs(math.sin(0.005*t)))
-        x = A*abs(math.sin(tx*t))+0.1
-        y = A*abs(math.sin(ty*t))+0.1
-        z = A*abs(math.sin(tz*t))+0.1
-        targe = np.array([x,y,z])*100
-        #fnum, targe = cirfly.fly(fnum)
-        #print("targe: ", targe)
-        next_call = next_call + 0.01;
-        #leng = next_call - time.time()
-        #print("length: ", leng)
-        time.sleep(0.015)
+         while run_recv_thread:
+             print("debug: ready to receive video frames...")
+             for f in container.decode(video=0):
+                 
+                 #frames = container.decode(video=0)
+                 tellostate.frameA =  f #next(frames)
+
+                # time.sleep(0.001)
+
+         
+                 #if tellostate.droneVideo.worldPos is not None:
+                 #    messageToUdp = tellostate.droneVideo.worldPos
+                 #    messageToUdp = " ".join(str(x) for x in messageToUdp)
+                 #    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
+
+class msg_thread(threading.Thread):
+    def __init__(self, name):
+        threading.Thread.__init__(self)
+        self.name = name
+    def run(self):
+         udpread = getPosData()
+         while True:
+             #print("receive data")
+             num, data = udpread.getmsg()
+             if num != 9:
+                 if num == 0:
+                     tellostate.flyflag = True
+                 else:
+                     tellostate.flyflag = False
+                 tellostate.target = data
+                 print("tellostate.target: ",tellostate.target)
+             else:
+                 pass
+                 #tellostate.flyflag = True
+
+class timer_thread(threading.Thread):
+    def __init__(self, name):
+        threading.Thread.__init__(self)
+        self.name = name
+    def run(self):
+         cirfly = circlefly(60,400)
+         fnum = 0
+         t = 0
+         tx = 0.27
+         ty = 0.20
+         tz = 0.15
+         next_call = time.time()
+         while True:
+             t += 0.015
+             A = 1.5   #*(abs(math.sin(0.005*t)))
+             x = A*abs(math.sin(tx*t))+0.1
+             y = A*abs(math.sin(ty*t))+0.1
+             z = A*abs(math.sin(tz*t))+0.1
+             tellostate.targe = np.array([x,y,z])*100
+             #fnum, targe = cirfly.fly(fnum)
+             #print("targe: ", targe)
+             next_call = next_call + 0.01;
+             #leng = next_call - time.time()
+             #print("length: ", leng)
+             time.sleep(0.015)
+
+class facetracking_thread(threading.Thread):
+    def __init__(self,name):
+        threading.Thread.__init__(self)
+        self.name = name
+    def run(self):
+         tDetector = TensoflowFaceDector(PATH_TO_CKPT)
+         next_call = time.time()
+         while True:
+             if tellostate.frameA is not None:
+                 
+                 frame = np.array(tellostate.frameA.to_image())
+                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                 (boxs, boxes, scores, classes, num_detections) = tDetector.run(frame)
+                 vis_util.visualize_boxes_and_labels_on_image_array(
+                     frame,
+                     np.squeeze(boxes),
+                     np.squeeze(classes).astype(np.int32),
+                     np.squeeze(scores),
+                     category_index,
+                     use_normalized_coordinates=True,
+                     min_score_thresh=0.3,
+                     line_thickness=4)
+
+                # control tello's direction
+                 if boxs is not None:
+                    xmin, xmax = boxs[0][1],boxs[0][3]
+                    center = (xmin + xmax )/2
+                    out = autofly.turnToangle(center)
+                    if tellostate.iffollow is True:
+                        tellostate.drone.counter_clockwise(out)
+                    #print("boxs: ",boxs)
+
+                 tellostate.framem = frame
+                 #print("realdy to show")
+                 #print(boxes, scores, classes, num_detections)
+                 #cv2.imshow("tensorflow based " , frame)
+                 #cv2.waitKey(1)
+
+             next_call = next_call + 0.030;
+             leng = next_call - time.time()
+             if leng < 0:
+                 leng = 0.01
+             #print("length: ", leng)
+             time.sleep(leng)
 
 
-def main():
+
+
+if __name__ == '__main__':
     try:
-        global flyflag
-        global target
-        global targe
-       # flightData = tellopy.FlightData()
+        tellostate = telloState()
         DroneVideo = DroneReg()
-        frameCount = 0
-        #threading.Thread(target = recv_thread).start()
-        threading.Thread(target = msg_thread).start()
-        threading.Thread(target = timer_thread).start()
-        count = 0 
-        aa = cv2.imread("./Calibration_letter_chessboard_7x5.png")
-        cv2.imshow("result", aa)
         autofly = autopiolot()
-        finishedNum = 0
-        completeflg = False
-        TimeStart = 0
-        TimeEnd = 0
-        speedNow = np.array([0.0,0.0,0.0])
-        frame = frameA
-        frameold = None
-        Cap = cv2.VideoCapture(0)
-        drone.connect()
-        drone.wait_for_connection(60.0)
-        drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
-        #drone.set_video_encoder_rate(4)
-        drone.set_loglevel(drone.LOG_WARN)
+        mesgThread = msg_thread("message ")
+        mesgThread.start()
+        #rcvThread = recv_thread("video thread")
+        #rcvThread.start()
+       # face_thread =  facetracking_thread("face tracking thread")
+        #face_thread.start()
+        #threading.Thread(target = msg_thread).start()
+        #threading.Thread(target = timer_thread).start()
+        chess = cv2.imread("./marker/Calibration_letter_chessboard_7x5.png")
+        cv2.imshow("result", chess)
         with open('result.csv','w') as csvfile:
              writer = csv.writer(csvfile)
              writer.writerow(['posx','posy','posz','velx','vely','velz','angx'\
                               ,'angy','angz','gyrx','gyry','gryz','accx','accy','accz',\
                              'tposx','tposy','tposz','tvelx','tvely','tvelz','tangx'\
                               ,'tangy','tangz','tgyrx','tgyry','tgryz','taccx','taccy','taccz' ])
+             frame = tellostate.frameA
+             frameold = None
              while True:
-                _, frame = Cap.read()
+                _, frame_pos = tellostate.Cap.read()
                 
-                if frame is frameold:
+                if frame_pos is frameold:
                     pass
                 else:
-                   frameold = frame
-                   
-                   DroneVideo.findARMarker(frame)
+                   frameold = frame_pos
+                   #print(tellostate.framem,"is to show....................k")
+                   if tellostate.framem is None:
+                       pass
+                   else:
+                     # pass
+                     if tellostate.ifshowvideo is True:
+                         pass
+                       # frame_face = tellostate.framem #np.array(tellostate.frameA.to_image())
+                       # cv2.imshow("tensorflow based " , frame_face)
+                        #cv2.waitKey(1)
+                     #print("tensorflow")
+                   DroneVideo.findARMarker(frameold)
                    DroneVideo.estimatePos()
-                   #print("euler: ", euler)
-                   #print("angle: " , round(drone.gyro[0]*100),round(drone.gyro[1]*100),round(drone.gyro[2]*100))
-                   #print("acc: ",round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2))
-                   #print("speed: ", drone.vel)
-                   #aTimeEnd = datetime.now()
-                   #aalltime  = aTimeEnd - TimeStart
-                   #$print(DroneVideo.getARPoint2())
-                   DroneVideo.show()
-                   if flyflag == True:
-                       #targetAchived = True if abs(self.worldPos[0] - target[0])<3 and abs(self.worldPos[1]-\
-                       #        target[1]) < 3 else False
-                       #DroneVideo.worldPos = np.array([20,4, 10])
-                       #AdjustX, AdjustY = autofly.sameAngleAutoflytoXY(DroneVideo.worldPos, 2,target)
+                   if tellostate.ifshowvideo is True:
+                        DroneVideo.show()
 
-                       TimeEnd = datetime.now()
-                       if TimeStart != 0:
-                           speedNow = autofly.getspeed(DroneVideo.worldPos, (TimeEnd - TimeStart).total_seconds())
-                       TimeStart = datetime.now()
+                    # touch button to fly
+                   if tellostate.flyflag == True:
+
+                       tellostate.TimeEnd = datetime.now()
+                       if tellostate.TimeStart != 0:
+                           tellostate.speedNow = autofly.getspeed(DroneVideo.worldPos, (tellostate.TimeEnd - tellostate.TimeStart).total_seconds())
+                       tellostate.TimeStart = datetime.now()
                        #targe = np.array([100,100,100])
-                       dspeed = np.array([round(-drone.acce[1]*100,2)+1,round(-drone.acce[0]*100,2)+1,round(-drone.acce[2]*100,2)+1])
-                       AdjustX, AdjustY, refspd = \
-                       autofly.sameAngleAutoflytoXY(DroneVideo.worldPos,speedNow,dspeed,\
-                                                    DroneVideo.worldRot[0][2]+94,targe)
-                       drone.flytoXYZ(AdjustX, AdjustY, 0)
-                       q = drone.quater
-                       euler = euler_from_quaternion(q) 
-                       euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
-                       print("targe: ", targe)
+                       dspeed = np.array([round(-tellostate.drone.acce[1]*100,2)+1,round(-tellostate.drone.acce[0]*100,2)+1,round(-tellostate.drone.acce[2]*100,2)+1])
+                       AdjustX, AdjustY, AdjustZ, refspd = \
+                       autofly.sameAngleAutoflytoXYZ(DroneVideo.worldPos,tellostate.speedNow,dspeed,\
+                                                    DroneVideo.worldRot[0][2]+94,tellostate.target)
+                       print("targe now: ", tellostate.target)
+                       print("pos   now: ", DroneVideo.worldPos)
+                       #print("adjustZ: ", AdjustZ)
+                       tellostate.drone.flytoXYZ(AdjustX, AdjustY, AdjustZ)
+                      # q = tellostate.drone.quater
+                      # euler = euler_from_quaternion(q) 
+                      # euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
+                       #print('Targe:  %f ' % (count, time.time()-start_time), end="")
+                        #print('Read a new frame %-4d, time used: %8.2fs \r' % (count, time.time()-start_time), end="")
+                       #print("targe: ", targe)
                        #print("euler: ",euler)
-                      # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],speedNow[0],speedNow[1],speedNow[2],\
-                      #                  euler[0],euler[1],euler[2],round(drone.gyro[0]*100,2),round(drone.gyro[1]*100,2),round(drone.gyro[2]*100,2),\
+                      # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
+                      #                  euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
 
-                      #                  round(-drone.acce[1]*100,2),round(-drone.acce[0]*100,2),round(-drone.acce[2]*100,2),\
-                      #                  targe[0],targe[1],targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
-                      #                  0.0,0.0,0.0,0.0,0.0,round(-drone.acce[2]*100,2)])
+                      #                  round(-tellostate.drone.acce[1]*100,2),round(-tellostate.drone.acce[0]*100,2),round(-tellostate.drone.acce[2]*100,2),\
+                      #                  tellostate.targe[0],tellostate.targe[1],tellostate.targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
+                      #                  0.0,0.0,0.0,0.0,0.0,round(-tellostate.drone.acce[2]*100,2)])
                        #print("adjust: ",AdjustX, AdjustY)
-                       #if targetAchived == True:
+                       #if tellostate.targetAchived == True:
                        #    count += 1
                        #    if count % 2 == 1:
-                       #        target = [15, 15, 15]
+                       #        tellostate.target = [15, 15, 15]
                        #    else:
-                       #        target = [2,2,2]
+                       #        tellostate.target = [2,2,2]
                    key = cv2.waitKey(1)
                    if key & 0xFF == ord ('j'):
-                       drone.down(20)
-                   if key & 0xFF == ord ('q'):
-                       drone.up(20)
+                       tellostate.drone.down(40)
+                   elif key & 0xFF == ord ('q'):
+                       tellostate.drone.up(40)
                    elif key & 0xFF == ord ('k'):
-                       drone.down(0)
+                       tellostate.drone.down(0)
                    elif key & 0xFF == ord ('a'):
-                       flyflag = True
+                       tellostate.flyflag = True
                    elif key & 0xFF == ord ('o'):
-                       drone.clockwise(40)
+                       tellostate.drone.clockwise(40)
+                   elif key & 0xFF == ord ('s'):
+                       tellostate.drone.counter_clockwise(0)
+                       tellostate.drone.forward(0)
+                       tellostate.drone.right(0)
                    elif key & 0xFF == ord ('b'):
-                       targe= np.array([150,150,120])
+                       tellostate.targe= np.array([100,100,120])
                        
                    elif key & 0xFF == ord ('m'):
-                       targe= np.array([20,50,40])
+                       tellostate.targe= np.array([20,50,40])
                    
-                   elif key & 0xFF == ord ('p'):
-                       autofly.Dronefly_P += 0.03
-                   elif key & 0xFF == ord ('y'):
-                       autofly.Dronefly_P -= 0.03
-
-                   elif key & 0xFF == ord ('l'):
-                       autofly.Dronefly_I += 0.03
-                   elif key & 0xFF == ord ('/'):
-                       autofly.Dronefly_I -= 0.03
-
-                   elif key & 0xFF == ord ('f'):
-                       autofly.Dronefly_D += 0.2
-                   elif key & 0xFF == ord ('g'):
-                       autofly.Dronefly_D -= 0.2
-
-                   elif key & 0xFF == ord ('c'):
-                       autofly.DroneSpeed_P += 0.03
-                   elif key & 0xFF == ord ('r'):
-                       autofly.DroneSpeed_P -= 0.03
-
-                   elif key & 0xFF == ord ('t'):
-                       autofly.DroneSpeed_D += 0.1
-                   elif key & 0xFF == ord ('n'):
-                       autofly.DroneSpeed_D -= 0.1
-
-                   elif key & 0xFF == ord ('e'):
-                       autofly.SpdLimit += 2.0
-                   elif key & 0xFF == ord ('u'):
-                       autofly.SpdLimit -= 2.0
-
-                   elif key & 0xFF == ord ('o'):
-                       drone.counter_clockwise(20)
-                   elif key & 0xFF == ord ('s'):
-                       drone.counter_clockwise(0)
-                       drone.forward(0)
-                       drone.right(0)
                    elif key & 0xFF == ord ('h'):
-                       drone.takeoff()
+                       tellostate.drone.takeoff()
                    elif key & 0xFF == ord ('d'):
-                       drone.land()
-                       flyflag = False
+                       tellostate.drone.land()
+                       tellostate.flyflag = False
+                   elif key & 0xFF == ord ('1'):
+                       tellostate.iffollow = True
+
+                   elif key & 0xFF == ord ('2'):
+                       tellostate.iffollow = False
                    #elif key & 0xFF == ord('t'):
                    #    cv2.imwrite (str(frameCount) + ".png", image)
                    #test fly
 
-                   print("limit: ",autofly.SpdLimit,"speed_P",\
-                         autofly.DroneSpeed_P,'speed_D', autofly.DroneSpeed_D ,"P",autofly.Dronefly_P\
-                           ,"D", autofly.Dronefly_D)
+                  # print("limit:%d " % (autofly.SpdLimit),\
+                  #      "spd_P:%.1f "% (autofly.DroneSpeed_P),\
+                  #      "spd_D:%.1f "% (autofly.DroneSpeed_D),\
+                  #      "pos_P:%.1f "% (autofly.Dronefly_P),\
+                  #      "pos_I:%.1f "% (autofly.Dronefly_I),\
+                  #      "pos_D:%.1f "% (autofly.Dronefly_D))
+                   #print("limit: ",autofly.SpdLimit,"speed_P",\
+                   #      autofly.tellostate.droneSpeed_P,'speed_D', autofly.tellostate.droneSpeed_D ,"P",autofly.tellostate.dronefly_P\
+                   #        ,"D", autofly.tellostate.dronefly_D)
                   # if cv2.waitKey(5) & 0xFF == ord ('q'):
                    #---------show frame end---------------------------------#
-                   #print("debug: got frame")
-                   #TimeEnd = datetime.now()
-                   #alltime  = TimeEnd - TimeStart
+                   #tellostate.TimeEnd = datetime.now()
+                   #alltime  = tellostate.TimeEnd - tellostate.TimeStart
                    #print("all time: ",int(alltime.total_seconds()*1000),"ms", " aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
 
     except Exception as ex:
@@ -273,9 +319,5 @@ def main():
         traceback.print_exception(exc_type, exc_value, exc_traceback)
         print(ex)
     finally:
-        #drone.quit()
+        #tellostate.drone.quit()
         cv2.destroyAllWindows()
-
-
-if __name__ == '__main__':
-    main()
