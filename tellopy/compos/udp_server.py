@@ -4,7 +4,7 @@ import numpy as np
 class getPosData():
     def __init__(self):
         self.host = '0.0.0.0'
-        self.port = 35601
+        self.port = 3333
         self.socket = socket(AF_INET, SOCK_DGRAM)
         self.socket.bind((self.host, self.port))
         print("udp initialization complete...")
@@ -19,10 +19,10 @@ class getPosData():
         try:
             if num != 9:
                 for index, value in enumerate(data):
-                     if value > 180:
-                         data[index] = 180
-                     if value < 0:
-                         data[index] = 0
+                     if value > 150:
+                         data[index] = 150
+                     if value < 15:
+                         data[index] = 15
                 
                 return num, data
             else:
