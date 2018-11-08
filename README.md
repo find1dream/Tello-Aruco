@@ -1,5 +1,6 @@
 # Tello-Aruco
 ## using Aruco to estimate the position of tello
+## using cascade pid to control the position of tello(I'm sure it works well than usual pid)
 ## the main file is /tellopy/compos/tellofly.py
 ## for the librarys, you can install them by reading https://github.com/hanyazou/TelloPy
 
