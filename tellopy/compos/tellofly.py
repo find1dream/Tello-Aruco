@@ -63,6 +63,11 @@ class telloState():
         self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA, handler)
         self.drone.set_video_encoder_rate(4)
         self.drone.set_loglevel(self.drone.LOG_WARN)
+        self.path = deque([[0.0,0.0,0.0]])
+        self.mission = deque([[0.0,0.0,0.0]])
+        self.modeNow = 100
+        self.ifmisson = False
+        self.ifpath = False
         
 class recv_thread(threading.Thread):
     def __init__(self, name):
@@ -98,41 +103,72 @@ class msg_thread(threading.Thread):
              #print("receive data")
              num, data = udpread.getmsg()
              if num != 9:
+                 #tellostate.missionOrPath = False
+                 tellostate.modeNow = num
                  if num == 0:
+                     tellostate.ifmisson = False
+                     tellostate.ifpath = False
                      tellostate.flyflag = True
                  else:
                      tellostate.flyflag = False
+                 if num == 2:
+                     tellostate.ifpath = True
+                     tellostate.ifmission = False
+                     tellostate.path.append(data)
+                 elif num == 3:
+                     tellostate.ifpath = False
+                     tellostate.ifmission = True
+                     tellostate.mission.append(data)
                  tellostate.target = data
                  print("tellostate.target: ",tellostate.target)
              else:
-                 pass
-                 #tellostate.flyflag = True
+
+                 #tellostate.missonOrPath = True
+                 
+                 timerThread = timer_thread()
+                 timerThread.start()
+                 #tellostate.msnOrPath = True
+                 #pass
+                 tellostate.flyflag = True
 
 class timer_thread(threading.Thread):
-    def __init__(self, name):
+    def __init__(self):
         threading.Thread.__init__(self)
-        self.name = name
-    def run(self):
-         cirfly = circlefly(60,400)
-         fnum = 0
-         t = 0
-         tx = 0.27
-         ty = 0.20
-         tz = 0.15
+        #self.cact = cact    # cactergory
+    def run(self, pos_deque):
+         wantTofly = None
+         if tellostate.ifmission == True:
+             wantTofly = missionfly(pos_deque)
+         if tellostate.ifpath == True:
+             wantTofly = pathfly(pos_deque)
+
          next_call = time.time()
-         while True:
-             t += 0.015
-             A = 1.5   #*(abs(math.sin(0.005*t)))
-             x = A*abs(math.sin(tx*t))+0.1
-             y = A*abs(math.sin(ty*t))+0.1
-             z = A*abs(math.sin(tz*t))+0.1
-             tellostate.targe = np.array([x,y,z])*100
-             #fnum, targe = cirfly.fly(fnum)
-             #print("targe: ", targe)
-             next_call = next_call + 0.01;
+         while wantTofly.ifend():
+             tellostate.targe = wantTofly.fly(DroneVideo.worldPos)
+             #next_call = next_call + 0.01;
              #leng = next_call - time.time()
              #print("length: ", leng)
-             time.sleep(0.015)
+             time.sleep(0.15)
+        # cirfly = circlefly(60,400)
+        # fnum = 0
+        # t = 0
+        # tx = 0.27
+        # ty = 0.20
+        # tz = 0.15
+        # next_call = time.time()
+        # while True:
+        #     t += 0.015
+        #     A = 1.5   #*(abs(math.sin(0.005*t)))
+        #     x = A*abs(math.sin(tx*t))+0.1
+        #     y = A*abs(math.sin(ty*t))+0.1
+        #     z = A*abs(math.sin(tz*t))+0.1
+        #     tellostate.targe = np.array([x,y,z])*100
+        #     #fnum, targe = cirfly.fly(fnum)
+        #     #print("targe: ", targe)
+        #     next_call = next_call + 0.01;
+        #     #leng = next_call - time.time()
+        #     #print("length: ", leng)
+        #     time.sleep(0.015)
 
 class facetracking_thread(threading.Thread):
     def __init__(self,name):
@@ -237,10 +273,15 @@ if __name__ == '__main__':
                        tellostate.TimeStart = datetime.now()
                        #targe = np.array([100,100,100])
                        dspeed = np.array([round(-tellostate.drone.acce[1]*100,2)+1,round(-tellostate.drone.acce[0]*100,2)+1,round(-tellostate.drone.acce[2]*100,2)+1])
+                       targPos = tellostate.target
+                       if tellostate.modeNow == 0 or tellostate.modeNow == 1:
+                            targPos = tellostate.target
+                       elif tellostate.modeNow == 2 or tellostate.modeNow == 3:
+                            targPos = tellostate.targe
                        AdjustX, AdjustY, AdjustZ, refspd = \
                        autofly.sameAngleAutoflytoXYZ(DroneVideo.worldPos,tellostate.speedNow,dspeed,\
-                                                    DroneVideo.worldRot[0][2]+94,tellostate.target)
-                       print("targe now: ", tellostate.target)
+                                                    DroneVideo.worldRot[0][2]+94,targPos)
+                       print("targe now: ", targPos)
                        print("pos   now: ", DroneVideo.worldPos)
                        #print("adjustZ: ", AdjustZ)
                        tellostate.drone.flytoXYZ(AdjustX, AdjustY, AdjustZ)
