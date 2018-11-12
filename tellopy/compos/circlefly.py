@@ -9,23 +9,27 @@ import numpy as np
 class  pathfly():
     def __init__(self,pos_deque):
         self.targetList =  pos_deque
-        self.targetLen = len(targetList)
+        self.targetLen = len(self.targetList)
         #self.targetList = np.array(self.pointsInCircum(r,num))
         self.finishedNum = 0
         self.posNow = np.array([0.0,0.0,0.0])
+        self.iffinished = False
 
     def TargetPosCalcu(self, fNum):
         if fNum >= self.targetLen:
-            return self.targetList[0]
+            return self.targetList[self.targetLen-1]
         else:
             return self.targetList[fNum]
 
     def checkIfTargetComplete(self, fnumNow):
         #print(posNow, targetPos)
-        if fnumNow == 1 or fnumNow == self.targetLen:
+        if fnumNow == 0 or fnumNow == self.targetLen:
             if math.sqrt((self.posNow[0]-self.targetPos[0])**2 + (self.posNow[1]-self.targetPos[1])**2) < 10:
-                print(math.sqrt((self.posNow[0]-self.targetPos[0])**2 + (self.posNow[1]-self.targetPos[1])**2 ) )
+                if fnumNow == self.targetLen:
+                    self.iffinished = True
+                #print(math.sqrt((self.posNow[0]-self.targetPos[0])**2 + (self.posNow[1]-self.targetPos[1])**2 ) )
                 fnumNow = fnumNow + 1
+            
         else:
                 fnumNow = fnumNow + 1
 
@@ -35,16 +39,13 @@ class  pathfly():
     
     def fly(self, posNow):
         self.posNow = posNow
-        targetPos = self.TargetPosCalcu(self.finishedNum)
+        self.targetPos = self.TargetPosCalcu(self.finishedNum)
         fnumnow = self.checkIfTargetComplete(self.finishedNum)
-        targetPos = self.TargetPosCalcu(fnumnow)
+        self.targetPos = self.TargetPosCalcu(fnumnow)
         self.finishedNum = fnumnow
-        # write pid controll here
-        ##
-        ##
-        return targetPos
+        return self.targetPos
     def ifend(self):
-        if self.finishedNum == self.targetLen:
+        if self.finishedNum == self.targetLen and self.iffinished == True:
             return True
         else:
             return False
@@ -53,42 +54,44 @@ class  pathfly():
 class  missionfly():
     def __init__(self,pos_deque):
         self.targetList =  pos_deque
-        self.targetLen = len(targetList)
+        self.targetLen = len(self.targetList)
         #self.targetList = np.array(self.pointsInCircum(r,num))
         self.finishedNum = 0
         self.posNow = np.array([0.0,0.0,0.0])
+        self.iffinished = False
 
     def TargetPosCalcu(self, fNum):
         if fNum >= self.targetLen:
-            return self.targetList[0]
+            return self.targetList[self.targetLen-1]
         else:
             return self.targetList[fNum]
 
     def checkIfTargetComplete(self, fnumNow):
         #print(posNow, targetPos)
         if math.sqrt((self.posNow[0]-self.targetPos[0])**2 + (self.posNow[1]-self.targetPos[1])**2) < 10:
-            print(math.sqrt((self.posNow[0]-self.targetPos[0])**2 + (self.posNow[1]-self.targetPos[1])**2 ) )
-            fnumNow = fnumNow + 1 
+                if fnumNow == self.targetLen:
+                    self.iffinished = True
+                #print(math.sqrt((self.posNow[0]-self.targetPos[0])**2 + (self.posNow[1]-self.targetPos[1])**2 ) )
+                fnumNow = fnumNow + 1
+            
+
         if fnumNow > len(self.targetList):
-            fnumNow = 0
+            fnumNow = len(self.targetList)
         return fnumNow
     
     def fly(self, posNow):
         self.posNow = posNow
-        targetPos = self.TargetPosCalcu(self.finishedNum)
+        self.targetPos = self.TargetPosCalcu(self.finishedNum)
         fnumnow = self.checkIfTargetComplete(self.finishedNum)
-        targetPos = self.TargetPosCalcu(fnumnow)
+        self.targetPos = self.TargetPosCalcu(fnumnow)
         self.finishedNum = fnumnow
-        # write pid controll here
-        ##
-        ##
-        return targetPos
+        return self.targetPos
+
     def ifend(self):
-        if self.finishedNum >= self.targetLen:
+        if self.finishedNum == self.targetLen and self.iffinished == True:
             return True
         else:
             return False
-        pass
     # input: position now
    # def fly(self, finishedNum, posNow):
    #         targetPos = self.circleTargetPosCalcu(finishedNum)

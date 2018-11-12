@@ -4,7 +4,7 @@ from collections import deque
 class autopiolot():
     def __init__(self):
         self.Dronefly_P = 1.96
-        self.Dronefly_I = 0.17
+        self.Dronefly_I = 0.0  #0.17
         self.Dronefly_D = 15.0  #1 10
         self.SpdLimit = 99
         self.Max_XY = 50
@@ -22,7 +22,7 @@ class autopiolot():
         self.derrordeque = deque([[0.0,0.0,0.0]])
         self.derror = np.array([0.0,0.0,0.0])
         self.ierror = np.array([0.0,0.0,0.0])
-        self.Max_ierror = 100
+        self.Max_ierror = 50
         self.MaxErrorRate = 10
         self.MaxDErrorRate = 8
 
@@ -48,7 +48,7 @@ class autopiolot():
                 spderror[index] = 0
         dspeed[2]+= 99.74
         out_spd = self.DroneSpeed_P * (spderror ) + self.DroneSpeed_D * dspeed
-        print(out_spd, errorlist, self.ierror)
+        #print(out_spd, errorlist, self.ierror)
         return out_spd,out_refSpd
     
     def datafilter(self,errorlist):

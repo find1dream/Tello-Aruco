@@ -61,13 +61,14 @@ class telloState():
         self.drone.connect()
         self.drone.wait_for_connection(60.0)
         self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA, handler)
-        self.drone.set_video_encoder_rate(4)
+        #self.drone.set_video_encoder_rate(4)
         self.drone.set_loglevel(self.drone.LOG_WARN)
-        self.path = deque([[0.0,0.0,0.0]])
-        self.mission = deque([[0.0,0.0,0.0]])
+        self.path = deque()
+        self.mission = deque()
         self.modeNow = 100
         self.ifmisson = False
         self.ifpath = False
+        self.pathMissonMultiTouch = 0
         
 class recv_thread(threading.Thread):
     def __init__(self, name):
@@ -103,8 +104,10 @@ class msg_thread(threading.Thread):
              #print("receive data")
              num, data = udpread.getmsg()
              if num != 9:
+                 print("num: ", num, "data: ", data)
                  #tellostate.missionOrPath = False
                  tellostate.modeNow = num
+                 tellostate.pathMissonMultiTouch = 0
                  if num == 0:
                      tellostate.ifmisson = False
                      tellostate.ifpath = False
@@ -122,33 +125,52 @@ class msg_thread(threading.Thread):
                  tellostate.target = data
                  print("tellostate.target: ",tellostate.target)
              else:
-
+                 tellostate.pathMissonMultiTouch += 1
+                 print("ready to fly!..................")
                  #tellostate.missonOrPath = True
-                 
-                 timerThread = timer_thread()
-                 timerThread.start()
+                 timerThread = None
+                 if tellostate.pathMissonMultiTouch <=1:
+                     if tellostate.ifpath == True:
+                        print("path deque: ", tellostate.path)
+                        timerThread = timer_thread(tellostate.path)
+                     else:
+                        print("mission deque: ",tellostate.mission)
+                        timerThread = timer_thread(tellostate.mission)
+                     timerThread.start()
+
+
+
                  #tellostate.msnOrPath = True
                  #pass
                  tellostate.flyflag = True
 
 class timer_thread(threading.Thread):
-    def __init__(self):
+    def __init__(self,pos_deque):
         threading.Thread.__init__(self)
+        self.pos_deque = pos_deque
         #self.cact = cact    # cactergory
-    def run(self, pos_deque):
+    def run(self):
+       try:
          wantTofly = None
          if tellostate.ifmission == True:
-             wantTofly = missionfly(pos_deque)
-         if tellostate.ifpath == True:
-             wantTofly = pathfly(pos_deque)
+             wantTofly = missionfly(self.pos_deque)
+         elif tellostate.ifpath == True:
+             wantTofly = pathfly(self.pos_deque)
 
          next_call = time.time()
-         while wantTofly.ifend():
-             tellostate.targe = wantTofly.fly(DroneVideo.worldPos)
-             #next_call = next_call + 0.01;
-             #leng = next_call - time.time()
-             #print("length: ", leng)
-             time.sleep(0.15)
+         while not wantTofly.ifend():
+             try: 
+                tellostate.targe = wantTofly.fly(DroneVideo.worldPos)
+                print("timer_thread- targe: ",tellostate.targe)
+                #next_call = next_call + 0.01;
+                #leng = next_call - time.time()
+                #print("length: ", leng)
+                time.sleep(0.3)
+             except:
+                print("please check if the drone can see the aruco board")
+         print("timer_thread completed!!!")
+       except:
+             print("wantTofly is None")
         # cirfly = circlefly(60,400)
         # fnum = 0
         # t = 0
@@ -241,6 +263,7 @@ if __name__ == '__main__':
                               ,'tangy','tangz','tgyrx','tgyry','tgryz','taccx','taccy','taccz' ])
              frame = tellostate.frameA
              frameold = None
+             print("received data from camera!!!")
              while True:
                 _, frame_pos = tellostate.Cap.read()
                 
@@ -261,8 +284,8 @@ if __name__ == '__main__':
                      #print("tensorflow")
                    DroneVideo.findARMarker(frameold)
                    DroneVideo.estimatePos()
-                   if tellostate.ifshowvideo is True:
-                        DroneVideo.show()
+                   #if tellostate.ifshowvideo is True:
+                   #DroneVideo.show()
 
                     # touch button to fly
                    if tellostate.flyflag == True:
@@ -273,7 +296,7 @@ if __name__ == '__main__':
                        tellostate.TimeStart = datetime.now()
                        #targe = np.array([100,100,100])
                        dspeed = np.array([round(-tellostate.drone.acce[1]*100,2)+1,round(-tellostate.drone.acce[0]*100,2)+1,round(-tellostate.drone.acce[2]*100,2)+1])
-                       targPos = tellostate.target
+                       targPos = tellostate.targe
                        if tellostate.modeNow == 0 or tellostate.modeNow == 1:
                             targPos = tellostate.target
                        elif tellostate.modeNow == 2 or tellostate.modeNow == 3:
@@ -281,8 +304,7 @@ if __name__ == '__main__':
                        AdjustX, AdjustY, AdjustZ, refspd = \
                        autofly.sameAngleAutoflytoXYZ(DroneVideo.worldPos,tellostate.speedNow,dspeed,\
                                                     DroneVideo.worldRot[0][2]+94,targPos)
-                       print("targe now: ", targPos)
-                       print("pos   now: ", DroneVideo.worldPos)
+                       #print("targe now: ", targPos,"pos now: ", DroneVideo.worldPos)
                        #print("adjustZ: ", AdjustZ)
                        tellostate.drone.flytoXYZ(AdjustX, AdjustY, AdjustZ)
                       # q = tellostate.drone.quater
@@ -314,6 +336,8 @@ if __name__ == '__main__':
                        tellostate.drone.down(0)
                    elif key & 0xFF == ord ('a'):
                        tellostate.flyflag = True
+                   elif key & 0xFF == ord (';'):
+                       tellostate.flyflag = False
                    elif key & 0xFF == ord ('o'):
                        tellostate.drone.clockwise(40)
                    elif key & 0xFF == ord ('s'):

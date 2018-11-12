@@ -24,6 +24,7 @@ class getPosData():
                      if value < 15:
                          data[index] = 15
                 
+                data[2] += 6        # compensate
                 return num, data
             else:
                 return num, 0
@@ -45,7 +46,6 @@ class getPosData():
 if __name__ == "__main__":
     udpRead = getPosData()
     while True:
-
         mm,n = udpRead.rcvRawdata()
         print(mm,n)
 
