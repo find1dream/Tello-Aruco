@@ -23,7 +23,7 @@ what I've done:
   
   2.use an additional camera(bottom facing) to esitimate the position of tello now
   
-  3.use multiple threads to perform all kinds of work(like: udp receiving, video receving, timmer and so on)
+  3.use multiple threads to perform all kinds of work(like: udp receiving, video receving, timer and so on)
   
   4.use tensorflow(I use the gpu version) to perform face tracking
 
