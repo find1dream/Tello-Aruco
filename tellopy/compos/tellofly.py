@@ -131,14 +131,12 @@ class msg_thread(threading.Thread):
                  timerThread = None
                  if tellostate.pathMissonMultiTouch <=1:
                      if tellostate.ifpath == True:
-                        print("path deque: ", tellostate.path)
+                        #print("path deque: ", tellostate.path)
                         timerThread = timer_thread(tellostate.path)
                      else:
-                        print("mission deque: ",tellostate.mission)
+                        #print("mission deque: ",tellostate.mission)
                         timerThread = timer_thread(tellostate.mission)
                      timerThread.start()
-
-
 
                  #tellostate.msnOrPath = True
                  #pass
@@ -156,7 +154,7 @@ class timer_thread(threading.Thread):
              wantTofly = missionfly(self.pos_deque)
          elif tellostate.ifpath == True:
              wantTofly = pathfly(self.pos_deque)
-
+         #print(wantTofly.targetList)
          next_call = time.time()
          while not wantTofly.ifend():
              try: 
@@ -165,10 +163,17 @@ class timer_thread(threading.Thread):
                 #next_call = next_call + 0.01;
                 #leng = next_call - time.time()
                 #print("length: ", leng)
-                time.sleep(0.3)
+                time.sleep(0.15)
              except:
-                print("please check if the drone can see the aruco board")
+                #print("")
+                print(DroneVideo.worldPos,"please check if the drone can see the aruco board")
+                break
          print("timer_thread completed!!!")
+
+         if tellostate.ifmission == True:
+             tellostate.mission.clear()
+         elif tellostate.ifpath == True:
+             tellostate.path.clear()
        except:
              print("wantTofly is None")
         # cirfly = circlefly(60,400)
@@ -312,7 +317,10 @@ if __name__ == '__main__':
                       # euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
                        #print('Targe:  %f ' % (count, time.time()-start_time), end="")
                         #print('Read a new frame %-4d, time used: %8.2fs \r' % (count, time.time()-start_time), end="")
-                       #print("targe: ", targe)
+                       print("targe: %0.2f,%0.2f,%0.2f "% \
+                             (tellostate.targe[0],tellostate.targe[1],tellostate.targe[2]))
+                       print("posnow: %0.2f,%0.2f,%0.2f "% \
+                             (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
                        #print("euler: ",euler)
                       # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
                       #                  euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
@@ -320,13 +328,6 @@ if __name__ == '__main__':
                       #                  round(-tellostate.drone.acce[1]*100,2),round(-tellostate.drone.acce[0]*100,2),round(-tellostate.drone.acce[2]*100,2),\
                       #                  tellostate.targe[0],tellostate.targe[1],tellostate.targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
                       #                  0.0,0.0,0.0,0.0,0.0,round(-tellostate.drone.acce[2]*100,2)])
-                       #print("adjust: ",AdjustX, AdjustY)
-                       #if tellostate.targetAchived == True:
-                       #    count += 1
-                       #    if count % 2 == 1:
-                       #        tellostate.target = [15, 15, 15]
-                       #    else:
-                       #        tellostate.target = [2,2,2]
                    key = cv2.waitKey(1)
                    if key & 0xFF == ord ('j'):
                        tellostate.drone.down(40)

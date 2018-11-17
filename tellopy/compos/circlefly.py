@@ -39,9 +39,13 @@ class  pathfly():
     
     def fly(self, posNow):
         self.posNow = posNow
+        print("aaaaaaaaaaa",self.targetList,"uieuoieouiueo:",self.targetList[0])
         self.targetPos = self.TargetPosCalcu(self.finishedNum)
+        print("eeeeeeeeeeeeeee")
         fnumnow = self.checkIfTargetComplete(self.finishedNum)
+        print("mmmmmmmmmmmmmm")
         self.targetPos = self.TargetPosCalcu(fnumnow)
+        print("xxxxxxxxxxxxxxxxx")
         self.finishedNum = fnumnow
         return self.targetPos
     def ifend(self):
@@ -81,9 +85,13 @@ class  missionfly():
     
     def fly(self, posNow):
         self.posNow = posNow
+        print("eeeeeeeeeeeee")
         self.targetPos = self.TargetPosCalcu(self.finishedNum)
+        print("nnnnnnnnnnnnnn")
         fnumnow = self.checkIfTargetComplete(self.finishedNum)
+        print("aaaaaaaaaaaaaa")
         self.targetPos = self.TargetPosCalcu(fnumnow)
+        print("ooooooooooooooooo")
         self.finishedNum = fnumnow
         return self.targetPos
 

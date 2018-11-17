@@ -3,7 +3,7 @@ import numpy as np
 from collections import deque
 class autopiolot():
     def __init__(self):
-        self.Dronefly_P = 1.96
+        self.Dronefly_P = 2.20#1.96
         self.Dronefly_I = 0.0  #0.17
         self.Dronefly_D = 15.0  #1 10
         self.SpdLimit = 99
