@@ -12,9 +12,9 @@ I hacked the library and then can use
 
   1.high speed mode(in theory max 10m/s)
   
-  2.receive mvo data(speed, position)
+  2.mvo data(speed, position)
   
-  3.receive tello attitudes
+  3.tello attitudes
   
 
 what I've done:
