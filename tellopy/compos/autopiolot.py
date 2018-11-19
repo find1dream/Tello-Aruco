@@ -13,7 +13,7 @@ class autopiolot():
         self.Max_error = 50
         self.DroneSpeed_P = 0.58
         self.DroneSpeed_D = -1.5
-        self.MaxSpeed = 200   #max speed is 200cm/s
+        self.MaxSpeed = 200   #max speed is ***cm/s
         self.TargetSpd = 2
         self.MaxRatio = 3
         self.speed = np.array([0.0,0.0,0.0])
@@ -52,7 +52,8 @@ class autopiolot():
         return out_spd,out_refSpd
     
     def datafilter(self,errorlist):
-        self.errorpast = self.errornow
+        # one second filter
+        self.errorpast = 0.9*self.errornow + 0.1*self.errorpast
         self.errornow = errorlist
 
 

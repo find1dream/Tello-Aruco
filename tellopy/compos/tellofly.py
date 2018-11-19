@@ -122,6 +122,10 @@ class msg_thread(threading.Thread):
                      tellostate.ifpath = False
                      tellostate.ifmission = True
                      tellostate.mission.append(data)
+                 elif num == 7:
+                     tellostate.drone.takeoff()
+                 elif num == 8:
+                     tellostate.drone.land()
                  tellostate.target = data
                  print("tellostate.target: ",tellostate.target)
              else:
