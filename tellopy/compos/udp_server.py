@@ -40,6 +40,7 @@ class getPosData():
         else:
             return cmd, 0
 
+
     def close(self):
         self.socket.close()
 

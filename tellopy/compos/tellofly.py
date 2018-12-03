@@ -20,6 +20,7 @@ from circlefly import *
 from transformations import *
 from face_tracking import *
 import csv
+import base64
 
 
 def handler(event, sender, data, **args):
@@ -71,6 +72,7 @@ class telloState():
         self.pathMissonMultiTouch = 0
         self.trackingPos = np.array([0.0,0.0,0.0])
         self.targetangle = 0.0
+        self.udpread = getPosData()
 
         # need to calculate the the angle to point to
     def gettargetagle(self, posNow, posTarget):
@@ -114,10 +116,9 @@ class msg_thread(threading.Thread):
         threading.Thread.__init__(self)
         self.name = name
     def run(self):
-         udpread = getPosData()
          while True:
              #print("receive data")
-             num, data = udpread.getmsg()
+             num, data = tellostate.udpread.getmsg()
              if num != 9:
                  print("num: ", num, "data: ", data)
                  #tellostate.missionOrPath = False
@@ -267,7 +268,6 @@ class facetracking_thread(threading.Thread):
              #print("length: ", leng)
              time.sleep(leng)
 
-
 class postracking_thread(threading.Thread):
     def __init__(self,name):
         threading.Thread.__init__(self)
@@ -277,8 +277,10 @@ class postracking_thread(threading.Thread):
          while True:
              if tellostate.frameA is not None:
                  
-                 frame = np.array(tellostate.frameA.to_image())
-                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                 #print("realdy to show")
+                 #print(boxes, scores, classes, num_detections)
+                 #cv2.imshow("tensorflow based " , frame)
+                 #cv2.waitKey(1)
 
                 # control tello's direction
                  try:
@@ -287,11 +289,34 @@ class postracking_thread(threading.Thread):
                     #print("boxs: ",boxs)
                  except:
                     print("please check if the drone can see the markers")
-                 tellostate.framem = frame
-                 #print("realdy to show")
-                 #print(boxes, scores, classes, num_detections)
-                 #cv2.imshow("tensorflow based " , frame)
-                 #cv2.waitKey(1)
+                 try:
+                    frame = np.array(tellostate.frameA.to_image())
+                    frame = cv2.resize(frame,(160.120))
+                    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY),100]
+                    encoded, buf = cv2.imencode('.jpg', frame)
+                    jpg_as_text = base64.b64encode(buf)
+                    try:
+                        datalen = 8000
+                        IP = '192.168.100.152'
+                        Port = 5555
+                        if len(jpg_as_text) > datalen:
+                            trunck1 = jpg_as_text[:datalen]
+                            trunck2 = jpg_as_text[datalen:]
+                            temp1 = list(trunck1)
+                            temp2 = list(trunck2)
+                            temp1[0] = 97
+                            temp1 = bytearray(temp1)
+                            temp2 = bytearray(temp2)
+                            tellostate.udpread.socket.sendto(temp1,(IP, Port))
+                            tellostate.udpread.socket.sendto(temp2,(IP, Port))
+                        else:
+                            tellostate.udpread.socket.sendto(jpg_as_text,(IP, Port))
+                    except:
+                        print("jpg_as_text may be too long: ", len(jpg_as_text))
+
+                    #frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                 except:
+                     print("please checke if the camera of drone got right data")
 
              next_call = next_call + 0.030;
              leng = next_call - time.time()
