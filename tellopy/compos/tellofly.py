@@ -69,6 +69,21 @@ class telloState():
         self.ifmisson = False
         self.ifpath = False
         self.pathMissonMultiTouch = 0
+        self.trackingPos = np.array([0.0,0.0,0.0])
+        self.targetangle = 0.0
+
+        # need to calculate the the angle to point to
+    def gettargetagle(self, posNow, posTarget):
+        targetangle = 0.0
+        try:
+             directVec = posTarget - posNow
+             if directVec[0] == 0.0:   # 90 degrees
+                 targetangle = 90.0
+             else:
+                 targetangle = math.atan(directVec[1]/directVec[0])*180/math.pi
+        except:
+            print("please check the gettargetagle input")
+        return targetangle
         
 class recv_thread(threading.Thread):
     def __init__(self, name):
@@ -122,6 +137,12 @@ class msg_thread(threading.Thread):
                      tellostate.ifpath = False
                      tellostate.ifmission = True
                      tellostate.mission.append(data)
+                 elif num == 5:
+                     tellostate.targetangle = data[0]   # angle to point
+                 elif num == 6:
+                     tellostate.trackingPos = data
+                     tellostate.targetangle = tellostate.gettargetagle(DroneVideo.worldRot,tellostate.trackingPos)
+
                  elif num == 7:
                      tellostate.drone.takeoff()
                  elif num == 8:
@@ -247,6 +268,37 @@ class facetracking_thread(threading.Thread):
              time.sleep(leng)
 
 
+class postracking_thread(threading.Thread):
+    def __init__(self,name):
+        threading.Thread.__init__(self)
+        self.name = name
+    def run(self):
+         next_call = time.time()
+         while True:
+             if tellostate.frameA is not None:
+                 
+                 frame = np.array(tellostate.frameA.to_image())
+                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+                # control tello's direction
+                 try:
+                    out = autofly.turnToangle_abs(DroneVideo.worldRot[0][2]+94,tellostate.targetangle)
+                    tellostate.drone.counter_clockwise(out)
+                    #print("boxs: ",boxs)
+                 except:
+                    print("please check if the drone can see the markers")
+                 tellostate.framem = frame
+                 #print("realdy to show")
+                 #print(boxes, scores, classes, num_detections)
+                 #cv2.imshow("tensorflow based " , frame)
+                 #cv2.waitKey(1)
+
+             next_call = next_call + 0.030;
+             leng = next_call - time.time()
+             if leng < 0:
+                 leng = 0.01
+             #print("length: ", leng)
+             time.sleep(leng)
 
 
 if __name__ == '__main__':
