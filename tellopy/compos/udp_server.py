@@ -18,13 +18,14 @@ class getPosData():
         data = data[1:]
         try:
             if num != 9:
-                for index, value in enumerate(data):
+                if num !=5 and num !=6:
+                  for index, value in enumerate(data):
                      if value > 150:
                          data[index] = 150
                      if value < 15:
                          data[index] = 15
                 
-                data[2] += 6        # compensate
+                  data[2] += 6        # compensate
                 return num, data
             else:
                 return num, 0

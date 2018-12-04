@@ -55,6 +55,7 @@ class telloState():
         self.drone =  tellopy.Tello()
         self.ifshowvideo = False
         self.iffollow = False
+        self.iffaceDetect = True
         self.Cap = cv2.VideoCapture(0)
         self.TimeStart = 0
         self.TimeEnd = 0
@@ -140,10 +141,14 @@ class msg_thread(threading.Thread):
                      tellostate.mission.append(data)
                  elif num == 5:
                      tellostate.targetangle = data[0]   # angle to point
+                     print("targetangnle: ",tellostate.targetangle)
                  elif num == 6:
                      tellostate.trackingPos = data
-                     tellostate.targetangle = tellostate.gettargetagle(DroneVideo.worldRot,tellostate.trackingPos)
-
+                     print("tracking pos: ",tellostate.trackingPos)
+                     try:
+                        tellostate.targetangle = tellostate.gettargetagle(DroneVideo.worldRot,tellostate.trackingPos)
+                     except:
+                         print("make sure the drone can see the markers")
                  elif num == 7:
                      tellostate.drone.takeoff()
                  elif num == 8:
@@ -274,8 +279,9 @@ class postracking_thread(threading.Thread):
         self.name = name
     def run(self):
          next_call = time.time()
+         tDetector = TensoflowFaceDector(PATH_TO_CKPT)
          while True:
-             if tellostate.frameA is not None:
+             if tellostate.frameA is not None or tellostate.framem is not None:
                  
                  #print("realdy to show")
                  #print(boxes, scores, classes, num_detections)
@@ -284,37 +290,47 @@ class postracking_thread(threading.Thread):
 
                 # control tello's direction
                  try:
-                    out = autofly.turnToangle_abs(DroneVideo.worldRot[0][2]+94,tellostate.targetangle)
-                    tellostate.drone.counter_clockwise(out)
+                     pass
+                    #out = autofly.turnToangle_abs(DroneVideo.worldRot[0][2]+94,tellostate.targetangle)
+                    #tellostate.drone.counter_clockwise(out)
                     #print("boxs: ",boxs)
                  except:
                     print("please check if the drone can see the markers")
                  try:
-                    frame = np.array(tellostate.frameA.to_image())
-                    frame = cv2.resize(frame,(160.120))
-                    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY),100]
-                    encoded, buf = cv2.imencode('.jpg', frame)
-                    jpg_as_text = base64.b64encode(buf)
-                    try:
-                        datalen = 8000
-                        IP = '192.168.100.152'
-                        Port = 5555
-                        if len(jpg_as_text) > datalen:
-                            trunck1 = jpg_as_text[:datalen]
-                            trunck2 = jpg_as_text[datalen:]
-                            temp1 = list(trunck1)
-                            temp2 = list(trunck2)
-                            temp1[0] = 97
-                            temp1 = bytearray(temp1)
-                            temp2 = bytearray(temp2)
-                            tellostate.udpread.socket.sendto(temp1,(IP, Port))
-                            tellostate.udpread.socket.sendto(temp2,(IP, Port))
-                        else:
-                            tellostate.udpread.socket.sendto(jpg_as_text,(IP, Port))
-                    except:
-                        print("jpg_as_text may be too long: ", len(jpg_as_text))
+                     frame = None
+                     if tellostate.iffaceDetect == True and tellostate.framem is not None:
+                        #print("framem:",tellostate.framem)
+                        #frame = np.array(tellostate.framem.to_image())
+                        #print("aaa")
+                        frame = cv2.resize(tellostate.framem,(160,120))
+                     else:
+                        frame = np.array(tellostate.frameA.to_image())
+                        frame = cv2.resize(frame,(160,120))
+                        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY),100]
+                     encoded, buf = cv2.imencode('.jpg', frame)
+                     jpg_as_text = base64.b64encode(buf)
+                     try:
+                         #print("send video to udp")
+                         datalen = 8000
+                         IP = '192.168.100.152'
+                         Port = 5555
+                         if len(jpg_as_text) > datalen:
+                             trunck1 = jpg_as_text[:datalen]
+                             trunck2 = jpg_as_text[datalen:]
+                             temp1 = list(trunck1)
+                             temp2 = list(trunck2)
+                             temp1[0] = 97
+                             temp1 = bytearray(temp1)
+                             temp2 = bytearray(temp2)
+                             tellostate.udpread.socket.sendto(temp1,(IP, Port))
+                             tellostate.udpread.socket.sendto(temp2,(IP, Port))
+                         else:
+                             tellostate.udpread.socket.sendto(jpg_as_text,(IP, Port))
+                     except:
+                         print("jpg_as_text may be too long: ", len(jpg_as_text))
 
-                    #frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                     #frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                  except:
                      print("please checke if the camera of drone got right data")
 
@@ -332,11 +348,14 @@ if __name__ == '__main__':
         DroneVideo = DroneReg()
         autofly = autopiolot()
         mesgThread = msg_thread("message ")
+        postracking = postracking_thread("postracking")
+        postracking.start()
         mesgThread.start()
-        #rcvThread = recv_thread("video thread")
-        #rcvThread.start()
-       # face_thread =  facetracking_thread("face tracking thread")
-        #face_thread.start()
+        rcvThread = recv_thread("video thread")
+        rcvThread.start()
+        if tellostate.iffaceDetect == True:
+            face_thread =  facetracking_thread("face tracking thread")
+            face_thread.start()
         #threading.Thread(target = msg_thread).start()
         #threading.Thread(target = timer_thread).start()
         chess = cv2.imread("./marker/Calibration_letter_chessboard_7x5.png")
