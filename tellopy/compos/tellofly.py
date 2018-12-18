@@ -103,7 +103,7 @@ class recv_thread(threading.Thread):
                  
                  #frames = container.decode(video=0)
                  tellostate.frameA =  f #next(frames)
-
+                
                 # time.sleep(0.001)
 
          
@@ -123,14 +123,16 @@ class msg_thread(threading.Thread):
              if num != 9:
                  print("num: ", num, "data: ", data,tellostate.flyflag)
                  #tellostate.missionOrPath = False
-                 tellostate.modeNow = num
+                 if num != 5 and num!= 6:
+                    tellostate.modeNow = num
                  tellostate.pathMissonMultiTouch = 0
-                 if num == 0:
+                 if num == 0 :
                      tellostate.ifmisson = False
                      tellostate.ifpath = False
                      tellostate.flyflag = True
-                 #else:
-                     #tellostate.flyflag = False
+                 else:
+                     if num != 5 and num !=6:
+                        tellostate.flyflag = False
                  if num == 2:
                      tellostate.ifpath = True
                      tellostate.ifmission = False
@@ -150,11 +152,14 @@ class msg_thread(threading.Thread):
                      except:
                          print("make sure the drone can see the markers")
                  elif num == 7:
+                     print("take off!!!!!!!!!!!!!!!!")
                      tellostate.drone.takeoff()
                  elif num == 8:
+                     print("take off!!!!!!!!!!!!!!!!")
                      tellostate.drone.land()
-                 tellostate.target = data
-                 print("tellostate.target: ",tellostate.target)
+                 if num != 5 and num != 6:
+                    tellostate.target = data
+                 #print("tellostate.target: ",tellostate.target)
              else:
                  tellostate.pathMissonMultiTouch += 1
                  print("ready to fly!..................")
@@ -359,7 +364,7 @@ if __name__ == '__main__':
             face_thread.start()
         #threading.Thread(target = msg_thread).start()
         #threading.Thread(target = timer_thread).start()
-        chess = cv2.imread("./marker/Calibration_letter_chessboard_7x5.png")
+        chess = cv2.imread("./marker/linux.jpg")
         cv2.imshow("result", chess)
         with open('result.csv','w') as csvfile:
              writer = csv.writer(csvfile)
@@ -418,10 +423,11 @@ if __name__ == '__main__':
                       # euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
                        #print('Targe:  %f ' % (count, time.time()-start_time), end="")
                         #print('Read a new frame %-4d, time used: %8.2fs \r' % (count, time.time()-start_time), end="")
-                  #     #print("targe: %0.2f,%0.2f,%0.2f "% \
-                       #      (tellostate.targe[0],tellostate.targe[1],tellostate.targe[2]))
-                       #print("posnow: %0.2f,%0.2f,%0.2f "% \
-                 #      #      (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
+                       print("targe: %0.2f,%0.2f,%0.2f "% \
+                             (targPos[0],targPos[1],targPos[2]),"modeNow:",
+                             tellostate.modeNow)
+                       print("posnow: %0.2f,%0.2f,%0.2f "% \
+                             (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
                        #print("euler: ",euler)
                       # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
                       #                  euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
