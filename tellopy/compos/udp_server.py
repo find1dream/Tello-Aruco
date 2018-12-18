@@ -25,7 +25,7 @@ class getPosData():
                      if value < 15:
                          data[index] = 15
                 
-                  data[2] += 6        # compensate
+                  data[2] += 6        # input absolute postion compensate
                 return num, data
             else:
                 return num, 0

@@ -121,7 +121,7 @@ class msg_thread(threading.Thread):
              #print("receive data")
              num, data = tellostate.udpread.getmsg()
              if num != 9:
-                 print("num: ", num, "data: ", data)
+                 print("num: ", num, "data: ", data,tellostate.flyflag)
                  #tellostate.missionOrPath = False
                  tellostate.modeNow = num
                  tellostate.pathMissonMultiTouch = 0
@@ -129,8 +129,8 @@ class msg_thread(threading.Thread):
                      tellostate.ifmisson = False
                      tellostate.ifpath = False
                      tellostate.flyflag = True
-                 else:
-                     tellostate.flyflag = False
+                 #else:
+                     #tellostate.flyflag = False
                  if num == 2:
                      tellostate.ifpath = True
                      tellostate.ifmission = False
@@ -302,10 +302,10 @@ class postracking_thread(threading.Thread):
                         #print("framem:",tellostate.framem)
                         #frame = np.array(tellostate.framem.to_image())
                         #print("aaa")
-                        frame = cv2.resize(tellostate.framem,(160,120))
+                        frame = cv2.resize(tellostate.framem,(152,112))
                      else:
                         frame = np.array(tellostate.frameA.to_image())
-                        frame = cv2.resize(frame,(160,120))
+                        frame = cv2.resize(frame,(152,112))
                         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                      encode_param = [int(cv2.IMWRITE_JPEG_QUALITY),100]
                      encoded, buf = cv2.imencode('.jpg', frame)
@@ -325,6 +325,7 @@ class postracking_thread(threading.Thread):
                              temp2 = bytearray(temp2)
                              tellostate.udpread.socket.sendto(temp1,(IP, Port))
                              tellostate.udpread.socket.sendto(temp2,(IP, Port))
+                             #print("send complete")
                          else:
                              tellostate.udpread.socket.sendto(jpg_as_text,(IP, Port))
                      except:
@@ -417,10 +418,10 @@ if __name__ == '__main__':
                       # euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
                        #print('Targe:  %f ' % (count, time.time()-start_time), end="")
                         #print('Read a new frame %-4d, time used: %8.2fs \r' % (count, time.time()-start_time), end="")
-                       print("targe: %0.2f,%0.2f,%0.2f "% \
-                             (tellostate.targe[0],tellostate.targe[1],tellostate.targe[2]))
-                       print("posnow: %0.2f,%0.2f,%0.2f "% \
-                             (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
+                  #     #print("targe: %0.2f,%0.2f,%0.2f "% \
+                       #      (tellostate.targe[0],tellostate.targe[1],tellostate.targe[2]))
+                       #print("posnow: %0.2f,%0.2f,%0.2f "% \
+                 #      #      (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
                        #print("euler: ",euler)
                       # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
                       #                  euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
