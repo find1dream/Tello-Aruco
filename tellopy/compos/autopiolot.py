@@ -144,7 +144,20 @@ class autopiolot():
     def turnToangle_abs(self, angleNow,angleTarget):
         self.abstargetAngle = angleTarget
         self.absangPast = self.absangError
-        self.absangError = self.abstargetAngle - angleNow
+    
+        M = self.abstargetAngle - angleNow
+        if angleTarget >0:
+            if -180 < M and M < 180:
+                error = M
+            else:
+                error = M - 360
+        else:
+            if M < -180:
+                error = M + 360
+            else:
+                error = M
+        self.absangError = error
+        print("angle error now: ", error)
         out = self.absDroneAng_P * self.absangError + self.absDroneAng_D *\
         (self.absangError - self.absangPast)
         if out > 100:

@@ -63,6 +63,7 @@ class telloState():
         self.drone.connect()
         self.drone.wait_for_connection(60.0)
         self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA, handler)
+        self.isflying = False
         #self.drone.set_video_encoder_rate(4)
         self.drone.set_loglevel(self.drone.LOG_WARN)
         self.path = deque()
@@ -120,8 +121,8 @@ class msg_thread(threading.Thread):
          while True:
              #print("receive data")
              num, data = tellostate.udpread.getmsg()
+             #print("num: ", num, "data: ", data,"tellostate.flyflag: ",tellostate.flyflag)
              if num != 9:
-                 print("num: ", num, "data: ", data,tellostate.flyflag)
                  #tellostate.missionOrPath = False
                  if num != 5 and num!= 6:
                     tellostate.modeNow = num
@@ -146,17 +147,20 @@ class msg_thread(threading.Thread):
                      print("targetangnle: ",tellostate.targetangle)
                  elif num == 6:
                      tellostate.trackingPos = data
-                     print("tracking pos: ",tellostate.trackingPos)
+                     #print("tracking pos: ",tellostate.trackingPos)
                      try:
-                        tellostate.targetangle = tellostate.gettargetagle(DroneVideo.worldRot,tellostate.trackingPos)
+                        tellostate.targetangle = \
+                        tellostate.gettargetagle(DroneVideo.worldPos,tellostate.trackingPos)
                      except:
                          print("make sure the drone can see the markers")
                  elif num == 7:
                      print("take off!!!!!!!!!!!!!!!!")
                      tellostate.drone.takeoff()
+                     tellostate.isflying = True
                  elif num == 8:
                      print("landing!!!!!!!!!!!!!!!!")
                      tellostate.flyflag = False
+                     tellostate.isflying = False
                      tellostate.drone.land()
                      
                  if num != 5 and num != 6:
@@ -280,7 +284,7 @@ class facetracking_thread(threading.Thread):
              #print("length: ", leng)
              time.sleep(leng)
 
-class postracking_thread(threading.Thread):
+class sendvideo_thread(threading.Thread):
     def __init__(self,name):
         threading.Thread.__init__(self)
         self.name = name
@@ -297,22 +301,23 @@ class postracking_thread(threading.Thread):
 
                 # control tello's direction
                  try:
-                     pass
-                    #out = autofly.turnToangle_abs(DroneVideo.worldRot[0][2]+94,tellostate.targetangle)
-                    #tellostate.drone.counter_clockwise(out)
-                    #print("boxs: ",boxs)
+                # if tellostate.isflying == True:
+                    #print("tracking the angnle")
+                    #print("angle now", DroneVideo.realAngle, "target angle: ", tellostate.targetangle)
+                    out = autofly.turnToangle_abs(DroneVideo.realAngle,tellostate.targetangle)
+                    tellostate.drone.counter_clockwise(out)
                  except:
-                    print("please check if the drone can see the markers")
+                    print("angletracking: please check if the drone can see the markers")
                  try:
                      frame = None
                      if tellostate.iffaceDetect == True and tellostate.framem is not None:
                         #print("framem:",tellostate.framem)
                         #frame = np.array(tellostate.framem.to_image())
                         #print("aaa")
-                        frame = cv2.resize(tellostate.framem,(152,112))
+                        frame = cv2.resize(tellostate.framem,(120,90))
                      else:
                         frame = np.array(tellostate.frameA.to_image())
-                        frame = cv2.resize(frame,(152,112))
+                        frame = cv2.resize(frame,(120,90))
                         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                      encode_param = [int(cv2.IMWRITE_JPEG_QUALITY),100]
                      encoded, buf = cv2.imencode('.jpg', frame)
@@ -342,6 +347,27 @@ class postracking_thread(threading.Thread):
                  except:
                      print("please checke if the camera of drone got right data")
 
+             next_call = next_call + 0.020;
+             leng = next_call - time.time()
+             if leng < 0:
+                 leng = 0.01
+             #print("length: ", leng)
+             time.sleep(leng)
+
+
+
+
+
+class postracking_thread(threading.Thread):
+    def __init__(self,name):
+        threading.Thread.__init__(self)
+        self.name = name
+    def run(self):
+         next_call = time.time()
+         while True:
+             if tellostate.frameA is not None or tellostate.framem is not None:
+                 pass
+
              next_call = next_call + 0.030;
              leng = next_call - time.time()
              if leng < 0:
@@ -350,17 +376,21 @@ class postracking_thread(threading.Thread):
              time.sleep(leng)
 
 
+
+
 if __name__ == '__main__':
     try:
         tellostate = telloState()
         DroneVideo = DroneReg()
         autofly = autopiolot()
         mesgThread = msg_thread("message ")
-        postracking = postracking_thread("postracking")
-        postracking.start()
+        sendvideo = sendvideo_thread("sendvideo")
+        sendvideo.start()
         mesgThread.start()
         rcvThread = recv_thread("video thread")
         rcvThread.start()
+        #postracking = postracking_thread("postracking")
+        #postracking.start()
         if tellostate.iffaceDetect == True:
             face_thread =  facetracking_thread("face tracking thread")
             face_thread.start()
@@ -416,7 +446,7 @@ if __name__ == '__main__':
                             targPos = tellostate.targe
                        AdjustX, AdjustY, AdjustZ, refspd = \
                        autofly.sameAngleAutoflytoXYZ(DroneVideo.worldPos,tellostate.speedNow,dspeed,\
-                                                    DroneVideo.worldRot[0][2]+94,targPos)
+                                                    DroneVideo.realAngle,targPos)
                        #print("targe now: ", targPos,"pos now: ", DroneVideo.worldPos)
                        #print("adjustZ: ", AdjustZ)
                        tellostate.drone.flytoXYZ(AdjustX, AdjustY, AdjustZ)
@@ -462,9 +492,11 @@ if __name__ == '__main__':
                    
                    elif key & 0xFF == ord ('h'):
                        tellostate.drone.takeoff()
+                       tellostate.isflying = True
                    elif key & 0xFF == ord ('d'):
                        tellostate.drone.land()
                        tellostate.flyflag = False
+                       tellostate.isflying = False
                    elif key & 0xFF == ord ('1'):
                        tellostate.iffollow = True
 

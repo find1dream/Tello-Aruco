@@ -47,6 +47,10 @@ class DroneReg():
             self.worldRotM = np.zeros(shape=(3,3))
             cv2.Rodrigues(self.rvec, self.worldRotM,  jacobian = 0 )
             self.worldRot = cv2.RQDecomp3x3(self.worldRotM)
+            self.realAngle = self.worldRot[0][2] + 94
+            if self.realAngle >180 and self.realAngle <274:
+                self.realAngle = self.realAngle - 360
+
             #self.worldRot[0][2] += 94
 
             #self.worldPos = - self.tvec * self.rvec_trs 
