@@ -155,8 +155,10 @@ class msg_thread(threading.Thread):
                      print("take off!!!!!!!!!!!!!!!!")
                      tellostate.drone.takeoff()
                  elif num == 8:
-                     print("take off!!!!!!!!!!!!!!!!")
+                     print("landing!!!!!!!!!!!!!!!!")
+                     tellostate.flyflag = False
                      tellostate.drone.land()
+                     
                  if num != 5 and num != 6:
                     tellostate.target = data
                  #print("tellostate.target: ",tellostate.target)
