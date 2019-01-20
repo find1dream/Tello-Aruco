@@ -50,6 +50,7 @@ class telloState():
         self.flyflag = False
         self.target = np.array([120, 120, 100])
         self.targe = np.array([120, 120, 100])
+        self.postemp = np.array([120,120,100])
         self.framem = None
         self.frameA = None
         self.drone =  tellopy.Tello()
@@ -74,6 +75,7 @@ class telloState():
         self.pathMissonMultiTouch = 0
         self.trackingPos = np.array([0.0,0.0,0.0])
         self.targetangle = 0.0
+        self.tempposRecord = False
         self.udpread = getPosData()
 
         # need to calculate the the angle to point to
@@ -81,10 +83,12 @@ class telloState():
         targetangle = 0.0
         try:
              directVec = posTarget - posNow
-             if directVec[0] == 0.0:   # 90 degrees
-                 targetangle = 90.0
+             length = math.sqrt(directVec[0]**2 + directVec[1]**2)
+             if directVec[0] > 0:
+                     targetangle =\
+                     math.asin(directVec[1]/length)*180/math.pi  - 90.0
              else:
-                 targetangle = math.atan(directVec[1]/directVec[0])*180/math.pi
+                     targetangle = 90.0-math.asin(directVec[1]/length)*180/math.pi 
         except:
             print("please check the gettargetagle input")
         return targetangle
@@ -135,22 +139,26 @@ class msg_thread(threading.Thread):
                      if num != 5 and num !=6:
                         tellostate.flyflag = False
                  if num == 2:
+                     tellostate.tempposRecord = True
                      tellostate.ifpath = True
                      tellostate.ifmission = False
                      tellostate.path.append(data)
                  elif num == 3:
+                     tellostate.tempposRecord = True
                      tellostate.ifpath = False
                      tellostate.ifmission = True
                      tellostate.mission.append(data)
                  elif num == 5:
                      tellostate.targetangle = data[0]   # angle to point
-                     print("targetangnle: ",tellostate.targetangle)
+                     #print("targetangnle: ",tellostate.targetangle)
                  elif num == 6:
                      tellostate.trackingPos = data
                      #print("tracking pos: ",tellostate.trackingPos)
                      try:
                         tellostate.targetangle = \
                         tellostate.gettargetagle(DroneVideo.worldPos,tellostate.trackingPos)
+                        #print("phone tracking- targetangle: ",
+                        #      tellostate.targetangle)
                      except:
                          print("make sure the drone can see the markers")
                  elif num == 7:
@@ -171,6 +179,7 @@ class msg_thread(threading.Thread):
                  print("ready to fly!..................")
                  #tellostate.missonOrPath = True
                  timerThread = None
+                 tellostate.tempposRecord = False
                  if tellostate.pathMissonMultiTouch <=1:
                      if tellostate.ifpath == True:
                         #print("path deque: ", tellostate.path)
@@ -301,23 +310,15 @@ class sendvideo_thread(threading.Thread):
 
                 # control tello's direction
                  try:
-                # if tellostate.isflying == True:
-                    #print("tracking the angnle")
-                    #print("angle now", DroneVideo.realAngle, "target angle: ", tellostate.targetangle)
-                    out = autofly.turnToangle_abs(DroneVideo.realAngle,tellostate.targetangle)
-                    tellostate.drone.counter_clockwise(out)
-                 except:
-                    print("angletracking: please check if the drone can see the markers")
-                 try:
                      frame = None
                      if tellostate.iffaceDetect == True and tellostate.framem is not None:
                         #print("framem:",tellostate.framem)
                         #frame = np.array(tellostate.framem.to_image())
                         #print("aaa")
-                        frame = cv2.resize(tellostate.framem,(120,90))
+                        frame = cv2.resize(tellostate.framem,(180,135))
                      else:
                         frame = np.array(tellostate.frameA.to_image())
-                        frame = cv2.resize(frame,(120,90))
+                        frame = cv2.resize(frame,(180,135))
                         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                      encode_param = [int(cv2.IMWRITE_JPEG_QUALITY),100]
                      encoded, buf = cv2.imencode('.jpg', frame)
@@ -337,9 +338,17 @@ class sendvideo_thread(threading.Thread):
                              temp2 = bytearray(temp2)
                              tellostate.udpread.socket.sendto(temp1,(IP, Port))
                              tellostate.udpread.socket.sendto(temp2,(IP, Port))
-                             #print("send complete")
                          else:
-                             tellostate.udpread.socket.sendto(jpg_as_text,(IP, Port))
+                             trunck1 = jpg_as_text[:len(jpg_as_text)/2]
+                             trunck2 = jpg_as_text[len(jpg_as_text)/2:]
+                             temp1 = list(trunck1)
+                             temp2 = list(trunck2)
+                             temp1[0] = 97
+                             temp1 = bytearray(temp1)
+                             temp2 = bytearray(temp2)
+                             tellostate.udpread.socket.sendto(temp1,(IP, Port))
+                             tellostate.udpread.socket.sendto(temp2,(IP, Port))
+                         #print("send complete")
                      except:
                          print("jpg_as_text may be too long: ", len(jpg_as_text))
 
@@ -368,7 +377,15 @@ class postracking_thread(threading.Thread):
              if tellostate.frameA is not None or tellostate.framem is not None:
                  pass
 
-             next_call = next_call + 0.030;
+                 try:
+                # if tellostate.isflying == True:
+                    #print("tracking the angnle")
+                    #print("angle now", DroneVideo.realAngle, "target angle: ", tellostate.targetangle)
+                    out = autofly.turnToangle_abs(DroneVideo.realAngle,tellostate.targetangle)
+                    tellostate.drone.counter_clockwise(out)
+                 except:
+                    print("angletracking: please check if the drone can see the markers")
+             next_call = next_call + 0.020;
              leng = next_call - time.time()
              if leng < 0:
                  leng = 0.01
@@ -389,8 +406,8 @@ if __name__ == '__main__':
         mesgThread.start()
         rcvThread = recv_thread("video thread")
         rcvThread.start()
-        #postracking = postracking_thread("postracking")
-        #postracking.start()
+        postracking = postracking_thread("postracking")
+        postracking.start()
         if tellostate.iffaceDetect == True:
             face_thread =  facetracking_thread("face tracking thread")
             face_thread.start()
@@ -442,7 +459,10 @@ if __name__ == '__main__':
                        targPos = tellostate.targe
                        if tellostate.modeNow == 0 or tellostate.modeNow == 1:
                             targPos = tellostate.target
+                            tellostate.postemp = tellostate.target
                        elif tellostate.modeNow == 2 or tellostate.modeNow == 3:
+                            if tellostate.tempposRecord == True:
+                                tellostate.targe = tellostate.postemp
                             targPos = tellostate.targe
                        AdjustX, AdjustY, AdjustZ, refspd = \
                        autofly.sameAngleAutoflytoXYZ(DroneVideo.worldPos,tellostate.speedNow,dspeed,\

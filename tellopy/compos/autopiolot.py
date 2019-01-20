@@ -36,8 +36,8 @@ class autopiolot():
         self.absangError = 0.0
         self.absangPast = 0
         self.abstargetAngle = 0.5
-        self.absDroneAng_P = 2.0
-        self.absDroneAng_D = 0.0
+        self.absDroneAng_P = 3.0
+        self.absDroneAng_D = 5.0
 
     def pidCtl(self,errorlist, nowspeed,dspeed):
         self.datafilter(errorlist)
@@ -157,7 +157,7 @@ class autopiolot():
             else:
                 error = M
         self.absangError = error
-        print("angle error now: ", error)
+        #print("angle error now: ", error)
         out = self.absDroneAng_P * self.absangError + self.absDroneAng_D *\
         (self.absangError - self.absangPast)
         if out > 100:
