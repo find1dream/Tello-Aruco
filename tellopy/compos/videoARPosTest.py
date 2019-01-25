@@ -15,8 +15,9 @@ parameters =  aruco.DetectorParameters_create()
 parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
 
 #board = aruco.GridBoard_create(5, 7, 0.033, 0.0035, dictionary) 
-board = aruco.GridBoard_create(8, 8 ,0.1515, 0.0585, dictionary) 
-arucoMarkerLength = 0.1515
+#board = aruco.GridBoard_create(8, 8 ,0.1515, 0.0585, dictionary) 
+board = aruco.GridBoard_create(2, 3 ,0.272, 1.0-0.272, dictionary) 
+#arucoMarkerLength = 0.1515
 PI = 3.141592653
 
 

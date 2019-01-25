@@ -12,13 +12,14 @@ import time
 import threading
 from multiprocessing  import Process
 from collections import deque
-from autopiolot import *
+from utils import *
+#from autopiolot import *
 from datetime import datetime
-from computerVision import *
-from udp_server import *
-from circlefly import *
-from transformations import *
-from face_tracking import *
+#from computerVision import *
+#from udp_server import *
+#from circlefly import *
+#from transformations import *
+#from face_tracking import *
 import csv
 import base64
 
@@ -77,6 +78,9 @@ class telloState():
         self.targetangle = 0.0
         self.tempposRecord = False
         self.udpread = getPosData()
+        self.CmdDict = {0:"fly", 1:"touchfly", 2:"path",3:"mission",
+                         5:"arrowAngleTracking", 6:"posTracking",
+                        7:"takeoff",8:"land",9:"wait",100:"other"}
 
         # need to calculate the the angle to point to
     def gettargetagle(self, posNow, posTarget):
@@ -105,17 +109,8 @@ class recv_thread(threading.Thread):
          while run_recv_thread:
              print("debug: ready to receive video frames...")
              for f in container.decode(video=0):
-                 
                  #frames = container.decode(video=0)
                  tellostate.frameA =  f #next(frames)
-                
-                # time.sleep(0.001)
-
-         
-                 #if tellostate.droneVideo.worldPos is not None:
-                 #    messageToUdp = tellostate.droneVideo.worldPos
-                 #    messageToUdp = " ".join(str(x) for x in messageToUdp)
-                 #    clientSock.sendto(messageToUdp.encode(), (udp_ip, udp_port))
 
 class msg_thread(threading.Thread):
     def __init__(self, name):
@@ -126,32 +121,32 @@ class msg_thread(threading.Thread):
              #print("receive data")
              num, data = tellostate.udpread.getmsg()
              #print("num: ", num, "data: ", data,"tellostate.flyflag: ",tellostate.flyflag)
-             if num != 9:
+             if tellostate.CmdDict[num] != "wait":
                  #tellostate.missionOrPath = False
-                 if num != 5 and num!= 6:
+                 if tellostate.CmdDict[num] != "arrowAngleTracking" and tellostate.CmdDict[num]!= "posTracking":
                     tellostate.modeNow = num
                  tellostate.pathMissonMultiTouch = 0
-                 if num == 0 :
+                 if tellostate.CmdDict[num] == "fly" :
                      tellostate.ifmisson = False
                      tellostate.ifpath = False
                      tellostate.flyflag = True
                  else:
-                     if num != 5 and num !=6:
+                     if tellostate.CmdDict[num] != "arrowAngleTracking" and tellostate.CmdDict[num] !="posTracking":
                         tellostate.flyflag = False
-                 if num == 2:
+                 if tellostate.CmdDict[num] == "path":
                      tellostate.tempposRecord = True
                      tellostate.ifpath = True
                      tellostate.ifmission = False
                      tellostate.path.append(data)
-                 elif num == 3:
+                 elif tellostate.CmdDict[num ]== "mission":
                      tellostate.tempposRecord = True
                      tellostate.ifpath = False
                      tellostate.ifmission = True
                      tellostate.mission.append(data)
-                 elif num == 5:
+                 elif tellostate.CmdDict[num] == "arrowAngleTracking":
                      tellostate.targetangle = data[0]   # angle to point
                      #print("targetangnle: ",tellostate.targetangle)
-                 elif num == 6:
+                 elif tellostate.CmdDict[num] == "posTracking":
                      tellostate.trackingPos = data
                      #print("tracking pos: ",tellostate.trackingPos)
                      try:
@@ -161,23 +156,22 @@ class msg_thread(threading.Thread):
                         #      tellostate.targetangle)
                      except:
                          print("make sure the drone can see the markers")
-                 elif num == 7:
+                 elif tellostate.CmdDict[num] == "takeoff":
                      print("take off!!!!!!!!!!!!!!!!")
                      tellostate.drone.takeoff()
                      tellostate.isflying = True
-                 elif num == 8:
+                 elif tellostate.CmdDict[num] == "land":
                      print("landing!!!!!!!!!!!!!!!!")
                      tellostate.flyflag = False
                      tellostate.isflying = False
                      tellostate.drone.land()
                      
-                 if num != 5 and num != 6:
+                 if tellostate.CmdDict[num] != "arrowAngleTracking" and tellostate.CmdDict[num] != "posTracking":
                     tellostate.target = data
                  #print("tellostate.target: ",tellostate.target)
              else:
                  tellostate.pathMissonMultiTouch += 1
                  print("ready to fly!..................")
-                 #tellostate.missonOrPath = True
                  timerThread = None
                  tellostate.tempposRecord = False
                  if tellostate.pathMissonMultiTouch <=1:
@@ -197,7 +191,6 @@ class timer_thread(threading.Thread):
     def __init__(self,pos_deque):
         threading.Thread.__init__(self)
         self.pos_deque = pos_deque
-        #self.cact = cact    # cactergory
     def run(self):
        try:
          wantTofly = None
@@ -248,6 +241,30 @@ class timer_thread(threading.Thread):
         #     #print("length: ", leng)
         #     time.sleep(0.015)
 
+class dataCollection_thread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+    def run(self):
+        fnum = 0
+        t = 0
+        tx = 0.47
+        ty = 0.30
+        tz = 0.15
+        next_call = time.time()
+        while True:
+            t += 0.015
+            A = 1.5   #*(abs(math.sin(0.005*t)))
+            x = A*abs(math.sin(tx*t))+0.1
+            y = A*abs(math.sin(ty*t))+0.1
+            z = (A-0.3)*abs(math.sin(tz*t))+0.1
+            tellostate.targe = np.array([x,y,z])*100
+            #fnum, targe = cirfly.fly(fnum)
+            #print("targe: ", targe)
+            next_call = next_call + 0.01;
+            #leng = next_call - time.time()
+            #print("length: ", leng)
+            time.sleep(0.015)
+
 class facetracking_thread(threading.Thread):
     def __init__(self,name):
         threading.Thread.__init__(self)
@@ -281,10 +298,6 @@ class facetracking_thread(threading.Thread):
                     #print("boxs: ",boxs)
 
                  tellostate.framem = frame
-                 #print("realdy to show")
-                 #print(boxes, scores, classes, num_detections)
-                 #cv2.imshow("tensorflow based " , frame)
-                 #cv2.waitKey(1)
 
              next_call = next_call + 0.030;
              leng = next_call - time.time()
@@ -303,10 +316,6 @@ class sendvideo_thread(threading.Thread):
          while True:
              if tellostate.frameA is not None or tellostate.framem is not None:
                  
-                 #print("realdy to show")
-                 #print(boxes, scores, classes, num_detections)
-                 #cv2.imshow("tensorflow based " , frame)
-                 #cv2.waitKey(1)
 
                 # control tello's direction
                  try:
@@ -364,9 +373,6 @@ class sendvideo_thread(threading.Thread):
              time.sleep(leng)
 
 
-
-
-
 class postracking_thread(threading.Thread):
     def __init__(self,name):
         threading.Thread.__init__(self)
@@ -408,6 +414,10 @@ if __name__ == '__main__':
         rcvThread.start()
         postracking = postracking_thread("postracking")
         postracking.start()
+
+
+        dataCollection = dataCollection_thread()
+        dataCollection.start()
         if tellostate.iffaceDetect == True:
             face_thread =  facetracking_thread("face tracking thread")
             face_thread.start()
@@ -457,10 +467,10 @@ if __name__ == '__main__':
                        #targe = np.array([100,100,100])
                        dspeed = np.array([round(-tellostate.drone.acce[1]*100,2)+1,round(-tellostate.drone.acce[0]*100,2)+1,round(-tellostate.drone.acce[2]*100,2)+1])
                        targPos = tellostate.targe
-                       if tellostate.modeNow == 0 or tellostate.modeNow == 1:
+                       if tellostate.CmdDict[tellostate.modeNow] == "fly" or tellostate.CmdDict[tellostate.modeNow] == "touchfly":
                             targPos = tellostate.target
                             tellostate.postemp = tellostate.target
-                       elif tellostate.modeNow == 2 or tellostate.modeNow == 3:
+                       elif tellostate.CmdDict[tellostate.modeNow] == "mission" or tellostate.CmdDict[tellostate.modeNow] == "path":
                             if tellostate.tempposRecord == True:
                                 tellostate.targe = tellostate.postemp
                             targPos = tellostate.targe
@@ -475,18 +485,21 @@ if __name__ == '__main__':
                       # euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
                        #print('Targe:  %f ' % (count, time.time()-start_time), end="")
                         #print('Read a new frame %-4d, time used: %8.2fs \r' % (count, time.time()-start_time), end="")
-                       print("targe: %0.2f,%0.2f,%0.2f "% \
-                             (targPos[0],targPos[1],targPos[2]),"modeNow:",
-                             tellostate.modeNow)
-                       print("posnow: %0.2f,%0.2f,%0.2f "% \
-                             (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
+                       #print("targe: %0.2f,%0.2f,%0.2f "% \
+                       #      (targPos[0],targPos[1],targPos[2]),"modeNow:",
+                       #      tellostate.CmdDict[tellostate.modeNow])
+                       #print("posnow: %0.2f,%0.2f,%0.2f "% \
+                       #      (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
                        #print("euler: ",euler)
-                      # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
-                      #                  euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
+                       q = tellostate.drone.quater
+                       euler = euler_from_quaternion(q) 
+                       euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
+                       writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
+                                        euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
 
-                      #                  round(-tellostate.drone.acce[1]*100,2),round(-tellostate.drone.acce[0]*100,2),round(-tellostate.drone.acce[2]*100,2),\
-                      #                  tellostate.targe[0],tellostate.targe[1],tellostate.targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
-                      #                  0.0,0.0,0.0,0.0,0.0,round(-tellostate.drone.acce[2]*100,2)])
+                                        round(-tellostate.drone.acce[1]*100,2),round(-tellostate.drone.acce[0]*100,2),round(-tellostate.drone.acce[2]*100,2),\
+                                        tellostate.targe[0],tellostate.targe[1],tellostate.targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
+                                        0.0,0.0,0.0,0.0,0.0,round(-tellostate.drone.acce[2]*100,2)])
                    key = cv2.waitKey(1)
                    if key & 0xFF == ord ('j'):
                        tellostate.drone.down(40)
@@ -547,4 +560,5 @@ if __name__ == '__main__':
         print(ex)
     finally:
         #tellostate.drone.quit()
+        tellostate.drone.land()
         cv2.destroyAllWindows()
