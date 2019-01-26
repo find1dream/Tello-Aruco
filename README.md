@@ -7,7 +7,8 @@ for the librarys, you can install them by reading https://github.com/hanyazou/Te
 
 my code is for my project, so it changes ofen, if you want to use some of it, the best way maybe by reading the code I wrote and try it in you own project.
 
-# Main different with tellopy:
+**Main different with tellopy**:
+
 I hacked the library and then can use 
 
   1.high speed mode(in theory max 10m/s)
@@ -17,7 +18,7 @@ I hacked the library and then can use
   3.tello attitudes
   
 
-what I've done:
+**what I've done**:
 
   1.use cascade PID to control tello position(very fast and stable)
   
@@ -27,7 +28,7 @@ what I've done:
   
   4.use tensorflow(I use the gpu version) to perform face tracking
 
-todo:
+**todo**:
 
   1.integrate https://github.com/find1dream/drone-path-training to the project now
   
