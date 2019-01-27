@@ -9,12 +9,12 @@ class autopiolot():
         self.SpdLimit = 99
         self.Max_XY = 50
         self.oldpos = None
-        self.ErrorMargin = 15
-        self.Max_error = 50
+        self.ErrorMargin = 15.
+        self.Max_error = 50.
         self.DroneSpeed_P = 0.58
         self.DroneSpeed_D = -1.5
-        self.MaxSpeed = 200   #max speed is ***cm/s
-        self.TargetSpd = 2
+        self.MaxSpeed = 200.   #max speed is ***cm/s
+        self.TargetSpd = 2.
         self.MaxRatio = 3
         self.speed = np.array([0.0,0.0,0.0])
         self.errorpast = np.array([0.0, 0.0, 0.0])

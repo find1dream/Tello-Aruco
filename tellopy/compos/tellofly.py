@@ -13,16 +13,10 @@ import threading
 from multiprocessing  import Process
 from collections import deque
 from utils import *
-#from autopiolot import *
 from datetime import datetime
-#from computerVision import *
-#from udp_server import *
-#from circlefly import *
-#from transformations import *
-#from face_tracking import *
 import csv
 import base64
-
+import copy
 
 def handler(event, sender, data, **args):
     pass
@@ -62,6 +56,8 @@ class telloState():
         self.TimeStart = 0
         self.TimeEnd = 0
         self.speedNow = np.array([0.0,0.0,0.0])
+        self.Tspeed = np.array([0.0,0.0,0.0])
+        self.Tacc = np.array([0.0,0.0,0.0])
         self.drone.connect()
         self.drone.wait_for_connection(60.0)
         self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA, handler)
@@ -118,11 +114,9 @@ class msg_thread(threading.Thread):
         self.name = name
     def run(self):
          while True:
-             #print("receive data")
              num, data = tellostate.udpread.getmsg()
              #print("num: ", num, "data: ", data,"tellostate.flyflag: ",tellostate.flyflag)
              if tellostate.CmdDict[num] != "wait":
-                 #tellostate.missionOrPath = False
                  if tellostate.CmdDict[num] != "arrowAngleTracking" and tellostate.CmdDict[num]!= "posTracking":
                     tellostate.modeNow = num
                  tellostate.pathMissonMultiTouch = 0
@@ -177,7 +171,8 @@ class msg_thread(threading.Thread):
                  if tellostate.pathMissonMultiTouch <=1:
                      if tellostate.ifpath == True:
                         #print("path deque: ", tellostate.path)
-                        timerThread = timer_thread(tellostate.path)
+                        if (len(tellostate.path)> 5):  # have many points, else don't move
+                            timerThread = timer_thread(tellostate.path)
                      else:
                         #print("mission deque: ",tellostate.mission)
                         timerThread = timer_thread(tellostate.mission)
@@ -191,6 +186,7 @@ class timer_thread(threading.Thread):
     def __init__(self,pos_deque):
         threading.Thread.__init__(self)
         self.pos_deque = pos_deque
+        self.autof = autopiolot()
     def run(self):
        try:
          wantTofly = None
@@ -200,46 +196,59 @@ class timer_thread(threading.Thread):
              wantTofly = pathfly(self.pos_deque)
          #print(wantTofly.targetList)
          next_call = time.time()
+         TimeStart, TimeEnd = 0,0
+         posindex = 0
          while not wantTofly.ifend():
              try: 
-                tellostate.targe = wantTofly.fly(DroneVideo.worldPos)
-                print("timer_thread- targe: ",tellostate.targe)
-                #next_call = next_call + 0.01;
-                #leng = next_call - time.time()
-                #print("length: ", leng)
+                tellostate.TimeEnd = datetime.now()
+                if tellostate.TimeStart != 0:
+                    tellostate.targe, posindex = wantTofly.fly(DroneVideo.worldPos)
+                    #print("posindex:", posindex)
+                    
+                    if tellostate.ifpath == True and posindex < len(self.pos_deque) and posindex > 0:
+                        ## calculate Tspeed and Tacc 
+                        ## Tspeed = (pos2-pos1)/time
+                        ## Tacc  = (speed2 - speed1)/time
+                        alltime  = tellostate.TimeEnd - tellostate.TimeStart
+                        #if alltime == 0.0:
+                        #    continue
+
+                        middlePos = (self.pos_deque[posindex] + self.pos_deque[posindex -1])/2.
+                        
+                        tellostate.Tspeed = (self.pos_deque[posindex] -
+                                             self.pos_deque[posindex-1])/alltime.total_seconds()
+                        for index, value in enumerate(tellostate.Tspeed):
+                            if value > self.autof.MaxSpeed:
+                                tellostate.Tspeed[index] = self.autof.MaxSpeed
+                            if value < -self.autof.MaxSpeed:
+                                tellostate.Tspeed[index] = - self.autof.MaxSpeed
+
+
+                        Tspeed_temp1 = (middlePos - self.pos_deque[posindex-1])/alltime.total_seconds()
+                        Tspeed_temp2 = (self.pos_deque[posindex] - middlePos)/alltime.total_seconds()
+                        tellostate.Tacc = (Tspeed_temp2 - Tspeed_temp1)/alltime.total_seconds()
+                        #print("alltime",alltime.total_seconds(),tellostate.Tspeed, tellostate.Tacc)
+                    else:
+                        tellostate.Tspeed = np.array([0.,0.,0.])
+                        tellostate.Tacc   = np.array([0.,0.,0.])
+
+                    
+                tellostate.TimeStart = datetime.now()
                 time.sleep(0.15)
              except:
-                #print("")
+                print("")
                 print(DroneVideo.worldPos,"please check if the drone can see the aruco board")
-                break
+                #break
          print("timer_thread completed!!!")
 
          if tellostate.ifmission == True:
              tellostate.mission.clear()
          elif tellostate.ifpath == True:
              tellostate.path.clear()
+         tellostate.ifpath = False
+         tellostate.ifmisson = False
        except:
              print("wantTofly is None")
-        # cirfly = circlefly(60,400)
-        # fnum = 0
-        # t = 0
-        # tx = 0.27
-        # ty = 0.20
-        # tz = 0.15
-        # next_call = time.time()
-        # while True:
-        #     t += 0.015
-        #     A = 1.5   #*(abs(math.sin(0.005*t)))
-        #     x = A*abs(math.sin(tx*t))+0.1
-        #     y = A*abs(math.sin(ty*t))+0.1
-        #     z = A*abs(math.sin(tz*t))+0.1
-        #     tellostate.targe = np.array([x,y,z])*100
-        #     #fnum, targe = cirfly.fly(fnum)
-        #     #print("targe: ", targe)
-        #     next_call = next_call + 0.01;
-        #     #leng = next_call - time.time()
-        #     #print("length: ", leng)
-        #     time.sleep(0.015)
 
 class dataCollection_thread(threading.Thread):
     def __init__(self):
@@ -261,8 +270,8 @@ class dataCollection_thread(threading.Thread):
             #fnum, targe = cirfly.fly(fnum)
             #print("targe: ", targe)
             next_call = next_call + 0.01;
-            #leng = next_call - time.time()
-            #print("length: ", leng)
+            leng = next_call - time.time()
+            print("length: ", leng)
             time.sleep(0.015)
 
 class facetracking_thread(threading.Thread):
@@ -321,9 +330,6 @@ class sendvideo_thread(threading.Thread):
                  try:
                      frame = None
                      if tellostate.iffaceDetect == True and tellostate.framem is not None:
-                        #print("framem:",tellostate.framem)
-                        #frame = np.array(tellostate.framem.to_image())
-                        #print("aaa")
                         frame = cv2.resize(tellostate.framem,(180,135))
                      else:
                         frame = np.array(tellostate.frameA.to_image())
@@ -334,29 +340,17 @@ class sendvideo_thread(threading.Thread):
                      jpg_as_text = base64.b64encode(buf)
                      try:
                          #print("send video to udp")
-                         datalen = 8000
                          IP = '192.168.100.152'
                          Port = 5555
-                         if len(jpg_as_text) > datalen:
-                             trunck1 = jpg_as_text[:datalen]
-                             trunck2 = jpg_as_text[datalen:]
-                             temp1 = list(trunck1)
-                             temp2 = list(trunck2)
-                             temp1[0] = 97
-                             temp1 = bytearray(temp1)
-                             temp2 = bytearray(temp2)
-                             tellostate.udpread.socket.sendto(temp1,(IP, Port))
-                             tellostate.udpread.socket.sendto(temp2,(IP, Port))
-                         else:
-                             trunck1 = jpg_as_text[:len(jpg_as_text)/2]
-                             trunck2 = jpg_as_text[len(jpg_as_text)/2:]
-                             temp1 = list(trunck1)
-                             temp2 = list(trunck2)
-                             temp1[0] = 97
-                             temp1 = bytearray(temp1)
-                             temp2 = bytearray(temp2)
-                             tellostate.udpread.socket.sendto(temp1,(IP, Port))
-                             tellostate.udpread.socket.sendto(temp2,(IP, Port))
+                         trunck1 = jpg_as_text[:int(len(jpg_as_text)/2)]
+                         trunck2 = jpg_as_text[int(len(jpg_as_text)/2):]
+                         temp1 = list(trunck1)
+                         temp2 = list(trunck2)
+                         temp1[0] = 97
+                         temp1 = bytearray(temp1)
+                         temp2 = bytearray(temp2)
+                         tellostate.udpread.socket.sendto(temp1,(IP, Port))
+                         tellostate.udpread.socket.sendto(temp2,(IP, Port))
                          #print("send complete")
                      except:
                          print("jpg_as_text may be too long: ", len(jpg_as_text))
@@ -381,7 +375,6 @@ class postracking_thread(threading.Thread):
          next_call = time.time()
          while True:
              if tellostate.frameA is not None or tellostate.framem is not None:
-                 pass
 
                  try:
                 # if tellostate.isflying == True:
@@ -416,15 +409,14 @@ if __name__ == '__main__':
         postracking.start()
 
 
-        dataCollection = dataCollection_thread()
-        dataCollection.start()
+        #dataCollection = dataCollection_thread()
+        #dataCollection.start()
         if tellostate.iffaceDetect == True:
             face_thread =  facetracking_thread("face tracking thread")
             face_thread.start()
-        #threading.Thread(target = msg_thread).start()
-        #threading.Thread(target = timer_thread).start()
         chess = cv2.imread("./marker/linux.jpg")
         cv2.imshow("result", chess)
+        posEsti = PosEstimate("./model/bestmodel_bothxy.pth","./model/alldata.csv")
         with open('result.csv','w') as csvfile:
              writer = csv.writer(csvfile)
              writer.writerow(['posx','posy','posz','velx','vely','velz','angx'\
@@ -466,19 +458,33 @@ if __name__ == '__main__':
                        tellostate.TimeStart = datetime.now()
                        #targe = np.array([100,100,100])
                        dspeed = np.array([round(-tellostate.drone.acce[1]*100,2)+1,round(-tellostate.drone.acce[0]*100,2)+1,round(-tellostate.drone.acce[2]*100,2)+1])
-                       targPos = tellostate.targe
+                       targPos = copy.copy(tellostate.targe)
+                    
                        if tellostate.CmdDict[tellostate.modeNow] == "fly" or tellostate.CmdDict[tellostate.modeNow] == "touchfly":
-                            targPos = tellostate.target
+                            targPos = copy.copy(tellostate.target)
                             tellostate.postemp = tellostate.target
                        elif tellostate.CmdDict[tellostate.modeNow] == "mission" or tellostate.CmdDict[tellostate.modeNow] == "path":
                             if tellostate.tempposRecord == True:
                                 tellostate.targe = tellostate.postemp
-                            targPos = tellostate.targe
+                            targPos = copy.copy(tellostate.targe)
+                            #if tellostate.CmdDict[tellostate.modeNow] =="path":
+
+                       drone_state =\
+                                [targPos[0],targPos[1],targPos[2],tellostate.Tspeed[0],tellostate.Tspeed[1],tellostate.Tspeed[1],
+                                                  0,0,0,0,0,0,
+                                                  round(-tellostate.Tacc[0]*100,2),round(-tellostate.Tacc[1]*100,2),-99.74]
+                       estX, estY = posEsti.estimate(drone_state)
+                                #print("tellostate.Tspeed",tellostate.Tspeed,
+                                #      "tellostate.Tacce", -tellostate.Tacc)
+                                #print("estimate pos, x:",estX,"targetx",targPos[0],"y:",estY,"targety",targPos[1])
+                       if abs(targPos[0] - estX) < 40 and abs(targPos[1] - estY) < 40:
+                            targPos[0] = copy.copy(estX)
+                            targPos[1] = copy.copy(estY)
+                        
                        AdjustX, AdjustY, AdjustZ, refspd = \
                        autofly.sameAngleAutoflytoXYZ(DroneVideo.worldPos,tellostate.speedNow,dspeed,\
                                                     DroneVideo.realAngle,targPos)
-                       #print("targe now: ", targPos,"pos now: ", DroneVideo.worldPos)
-                       #print("adjustZ: ", AdjustZ)
+                       #print("targe now: ", targPos)
                        tellostate.drone.flytoXYZ(AdjustX, AdjustY, AdjustZ)
                       # q = tellostate.drone.quater
                       # euler = euler_from_quaternion(q) 
@@ -491,15 +497,15 @@ if __name__ == '__main__':
                        #print("posnow: %0.2f,%0.2f,%0.2f "% \
                        #      (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
                        #print("euler: ",euler)
-                       q = tellostate.drone.quater
-                       euler = euler_from_quaternion(q) 
-                       euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
-                       writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
-                                        euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
+                      # q = tellostate.drone.quater
+                      # euler = euler_from_quaternion(q) 
+                      # euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
+                      # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
+                      #                  euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
 
-                                        round(-tellostate.drone.acce[1]*100,2),round(-tellostate.drone.acce[0]*100,2),round(-tellostate.drone.acce[2]*100,2),\
-                                        tellostate.targe[0],tellostate.targe[1],tellostate.targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
-                                        0.0,0.0,0.0,0.0,0.0,round(-tellostate.drone.acce[2]*100,2)])
+                      #                  round(-tellostate.drone.acce[1]*100,2),round(-tellostate.drone.acce[0]*100,2),round(-tellostate.drone.acce[2]*100,2),\
+                      #                  tellostate.targe[0],tellostate.targe[1],tellostate.targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
+                      #                  0.0,0.0,0.0,0.0,0.0,round(-tellostate.drone.acce[2]*100,2)])
                    key = cv2.waitKey(1)
                    if key & 0xFF == ord ('j'):
                        tellostate.drone.down(40)

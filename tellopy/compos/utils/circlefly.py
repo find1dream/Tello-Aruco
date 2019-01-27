@@ -43,7 +43,7 @@ class  pathfly():
         fnumnow = self.checkIfTargetComplete(self.finishedNum)
         self.targetPos = self.TargetPosCalcu(fnumnow)
         self.finishedNum = fnumnow
-        return self.targetPos
+        return self.targetPos, self.finishedNum
     def ifend(self):
         if self.finishedNum == self.targetLen and self.iffinished == True:
             return True
@@ -81,15 +81,11 @@ class  missionfly():
     
     def fly(self, posNow):
         self.posNow = posNow
-        print("eeeeeeeeeeeee")
         self.targetPos = self.TargetPosCalcu(self.finishedNum)
-        print("nnnnnnnnnnnnnn")
         fnumnow = self.checkIfTargetComplete(self.finishedNum)
-        print("aaaaaaaaaaaaaa")
         self.targetPos = self.TargetPosCalcu(fnumnow)
-        print("ooooooooooooooooo")
         self.finishedNum = fnumnow
-        return self.targetPos
+        return self.targetPos, self.finishedNum
 
     def ifend(self):
         if self.finishedNum == self.targetLen and self.iffinished == True:
