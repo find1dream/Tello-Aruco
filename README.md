@@ -27,9 +27,9 @@ I hacked the library and then can use
   3.use multiple threads to perform all kinds of work(like: udp receiving, video receving, timer and so on)
   
   4.use tensorflow(I use the gpu version) to perform face tracking
+  
+  5.integrate https://github.com/find1dream/dronePosPlan to the project
 
 **todo**:
 
-  1.integrate https://github.com/find1dream/drone-path-training to the project now
-  
-  2.try multiple tellos
+  1.try multiple tellos
