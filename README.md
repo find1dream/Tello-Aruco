@@ -7,7 +7,7 @@ for the librarys, you can install them by reading https://github.com/hanyazou/Te
 
 my code is for my project, so it changes ofen, if you want to use some of it, the best way maybe by reading the code I wrote and try it in you own project.
 
-**Main different with tellopy**:
+**Main differece with tellopy**:
 
 I hacked the library and then can use 
 
@@ -24,12 +24,12 @@ I hacked the library and then can use
   
   2.use an additional camera(bottom facing) to esitimate the position of tello now
   
-  3.use multiple threads to perform all kinds of work(like: udp receiving, video receving, timer and so on)
+  3.use multiple threads to perform all kinds of work(like: udp receiving/sending, video receving, face tracking, timer and so on)
   
   4.use tensorflow(I use the gpu version) to perform face tracking
+  
+  5.integrate https://github.com/find1dream/dronePosPlan to the project
 
 **todo**:
 
-  1.integrate https://github.com/find1dream/drone-path-training to the project now
-  
-  2.try multiple tellos
+  1.try multiple tellos
