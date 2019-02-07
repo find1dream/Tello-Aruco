@@ -35,10 +35,8 @@ def init_logger():
     logger.setLevel(INFO)
 
 # Path to frozen detection graph. This is the actual model that is used for the object detection.
-PATH_TO_CKPT = './model/frozen_inference_graph_face.pb'
+PATH_TO_PTH = './model/best_head.pth'
 
-# List of the strings that is used to add correct label for each box.
-PATH_TO_LABELS = './protos/face_label_map.pbtxt'
 
 class telloState():
     def __init__(self):
@@ -51,7 +49,7 @@ class telloState():
         self.drone =  tellopy.Tello()
         self.ifshowvideo = False
         self.iffollow = False
-        self.iffaceDetect = True
+        self.ifheadDetect = True
         self.Cap = cv2.VideoCapture(0)
         self.TimeStart = 0
         self.TimeEnd = 0
@@ -274,41 +272,32 @@ class dataCollection_thread(threading.Thread):
             print("length: ", leng)
             time.sleep(0.015)
 
-class facetracking_thread(threading.Thread):
+class headtracking_thread(threading.Thread):
     def __init__(self,name):
         threading.Thread.__init__(self)
         self.name = name
     def run(self):
-         tDetector = TensoflowFaceDector(PATH_TO_CKPT)
+         head_detector = HeadDetector(PATH_TO_PTH)
          next_call = time.time()
          while True:
              if tellostate.frameA is not None:
                  
                  frame = np.array(tellostate.frameA.to_image())
                  frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                 (boxs, boxes, scores, classes, num_detections) = tDetector.run(frame)
-                 vis_util.visualize_boxes_and_labels_on_image_array(
-                     frame,
-                     np.squeeze(boxes),
-                     np.squeeze(classes).astype(np.int32),
-                     np.squeeze(scores),
-                     category_index,
-                     use_normalized_coordinates=True,
-                     min_score_thresh=0.3,
-                     line_thickness=4)
 
                 # control tello's direction
-                 if boxs is not None:
-                    xmin, xmax = boxs[0][1],boxs[0][3]
-                    center = (xmin + xmax )/2
-                    out = autofly.turnToangle(center)
-                    if tellostate.iffollow is True:
-                        tellostate.drone.counter_clockwise(out)
-                    #print("boxs: ",boxs)
+                # if boxs is not None:
+                #    xmin, xmax = boxs[0][1],boxs[0][3]
+                #    center = (xmin + xmax )/2
+                #    out = autofly.turnToangle(center)
+                #    if tellostate.iffollow is True:
+                #        tellostate.drone.counter_clockwise(out)
+                #    #print("boxs: ",boxs)
+                 tellostate.framem = head_detector.head_detect(frame)
+                 #cv2.imshow("test",tellostate.framem)
+                 #cv2.waitKey(1)
 
-                 tellostate.framem = frame
-
-             next_call = next_call + 0.030;
+             next_call = next_call + 0.01;
              leng = next_call - time.time()
              if leng < 0:
                  leng = 0.01
@@ -321,7 +310,6 @@ class sendvideo_thread(threading.Thread):
         self.name = name
     def run(self):
          next_call = time.time()
-         tDetector = TensoflowFaceDector(PATH_TO_CKPT)
          while True:
              if tellostate.frameA is not None or tellostate.framem is not None:
                  
@@ -329,7 +317,7 @@ class sendvideo_thread(threading.Thread):
                 # control tello's direction
                  try:
                      frame = None
-                     if tellostate.iffaceDetect == True and tellostate.framem is not None:
+                     if tellostate.ifheadDetect == True and tellostate.framem is not None:
                         frame = cv2.resize(tellostate.framem,(180,135))
                      else:
                         frame = np.array(tellostate.frameA.to_image())
@@ -340,7 +328,7 @@ class sendvideo_thread(threading.Thread):
                      jpg_as_text = base64.b64encode(buf)
                      try:
                          #print("send video to udp")
-                         IP = '192.168.100.152'
+                         IP = '192.168.100.156'
                          Port = 5555
                          trunck1 = jpg_as_text[:int(len(jpg_as_text)/2)]
                          trunck2 = jpg_as_text[int(len(jpg_as_text)/2):]
@@ -411,9 +399,10 @@ if __name__ == '__main__':
 
         #dataCollection = dataCollection_thread()
         #dataCollection.start()
-        if tellostate.iffaceDetect == True:
-            face_thread =  facetracking_thread("face tracking thread")
-            face_thread.start()
+        if tellostate.ifheadDetect == True:
+            print("head tracking............")
+            head_thread =  headtracking_thread("head tracking thread")
+            head_thread.start()
         chess = cv2.imread("./marker/linux.jpg")
         cv2.imshow("result", chess)
         posEsti = PosEstimate("./model/bestmodel_bothxy.pth","./model/alldata.csv")
@@ -440,8 +429,8 @@ if __name__ == '__main__':
                      # pass
                      if tellostate.ifshowvideo is True:
                          pass
-                       # frame_face = tellostate.framem #np.array(tellostate.frameA.to_image())
-                       # cv2.imshow("tensorflow based " , frame_face)
+                       # frame_head = tellostate.framem #np.array(tellostate.frameA.to_image())
+                       # cv2.imshow("tensorflow based " , frame_head)
                         #cv2.waitKey(1)
                      #print("tensorflow")
                    DroneVideo.findARMarker(frameold)
