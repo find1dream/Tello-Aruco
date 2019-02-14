@@ -26,10 +26,16 @@ I hacked the library and then can use
   
   3.use multiple threads to perform all kinds of work(like: udp receiving/sending, video receving, face tracking, timer and so on)
   
-  4.use tensorflow(I use the gpu version) to perform face tracking
+  4.use pytorch(I use the gpu version) to perform head tracking
   
   5.integrate https://github.com/find1dream/dronePosPlan to the project
 
 **todo**:
 
   1.try multiple tellos
+  
+  
+  Head recognition example.
+  ![](https://github.com/find1dream/Tello-Aruco/blob/master/head%20recognition.png)
+  
+  
