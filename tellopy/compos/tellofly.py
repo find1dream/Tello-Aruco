@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+    main logic file to control fly pattern of tello
+"""
 import cv2
 import math
 import sys
@@ -18,6 +21,11 @@ import csv
 import base64
 import copy
 
+
+
+"""
+    event handler, for debug or emergency
+"""
 def handler(event, sender, data, **args):
     pass
     #tellostate.drone = sender
@@ -34,25 +42,39 @@ def init_logger():
     logger.addHandler(handler)
     logger.setLevel(INFO)
 
-# Path to frozen detection graph. This is the actual model that is used for the object detection.
+# Path to head detection model. This is the actual model that is used for the object detection.
 PATH_TO_PTH = './model/best_head.pth'
 
 
+# different state or parameters of tello
 class telloState():
     def __init__(self):
+        # to determine if the drone can fly to target/targe
         self.flyflag = False
+
+        # use target and targe two targets for different fly mission
         self.target = np.array([120, 120, 100])
         self.targe = np.array([120, 120, 100])
         self.postemp = np.array([120,120,100])
+
+        # avoid read the same frame
         self.framem = None
         self.frameA = None
+
+        # intialize drone object
         self.drone =  tellopy.Tello()
+        # if show fpv
         self.ifshowvideo = False
+        # if follow the user
         self.iffollow = False
+        # if detect human head
         self.ifheadDetect = True
+        # bottom facing camera
         self.Cap = cv2.VideoCapture(0)
+        # main loop timer
         self.TimeStart = 0
         self.TimeEnd = 0
+
         self.speedNow = np.array([0.0,0.0,0.0])
         self.Tspeed = np.array([0.0,0.0,0.0])
         self.Tacc = np.array([0.0,0.0,0.0])
@@ -91,6 +113,8 @@ class telloState():
             print("please check the gettargetagle input")
         return targetangle
         
+
+# receive tello video
 class recv_thread(threading.Thread):
     def __init__(self, name):
         threading.Thread.__init__(self)
@@ -106,6 +130,8 @@ class recv_thread(threading.Thread):
                  #frames = container.decode(video=0)
                  tellostate.frameA =  f #next(frames)
 
+
+# receive msg from udp
 class msg_thread(threading.Thread):
     def __init__(self, name):
         threading.Thread.__init__(self)
@@ -137,15 +163,11 @@ class msg_thread(threading.Thread):
                      tellostate.mission.append(data)
                  elif tellostate.CmdDict[num] == "arrowAngleTracking":
                      tellostate.targetangle = data[0]   # angle to point
-                     #print("targetangnle: ",tellostate.targetangle)
                  elif tellostate.CmdDict[num] == "posTracking":
                      tellostate.trackingPos = data
-                     #print("tracking pos: ",tellostate.trackingPos)
                      try:
                         tellostate.targetangle = \
                         tellostate.gettargetagle(DroneVideo.worldPos,tellostate.trackingPos)
-                        #print("phone tracking- targetangle: ",
-                        #      tellostate.targetangle)
                      except:
                          print("make sure the drone can see the markers")
                  elif tellostate.CmdDict[num] == "takeoff":
@@ -160,7 +182,6 @@ class msg_thread(threading.Thread):
                      
                  if tellostate.CmdDict[num] != "arrowAngleTracking" and tellostate.CmdDict[num] != "posTracking":
                     tellostate.target = data
-                 #print("tellostate.target: ",tellostate.target)
              else:
                  tellostate.pathMissonMultiTouch += 1
                  print("ready to fly!..................")
@@ -168,11 +189,9 @@ class msg_thread(threading.Thread):
                  tellostate.tempposRecord = False
                  if tellostate.pathMissonMultiTouch <=1:
                      if tellostate.ifpath == True:
-                        #print("path deque: ", tellostate.path)
                         if (len(tellostate.path)> 5):  # have many points, else don't move
                             timerThread = timer_thread(tellostate.path)
                      else:
-                        #print("mission deque: ",tellostate.mission)
                         timerThread = timer_thread(tellostate.mission)
                      timerThread.start()
 
@@ -180,6 +199,9 @@ class msg_thread(threading.Thread):
                  #pass
                  tellostate.flyflag = True
 
+
+
+# calculate target acc and speed
 class timer_thread(threading.Thread):
     def __init__(self,pos_deque):
         threading.Thread.__init__(self)
@@ -198,8 +220,8 @@ class timer_thread(threading.Thread):
          posindex = 0
          while not wantTofly.ifend():
              try: 
-                tellostate.TimeEnd = datetime.now()
-                if tellostate.TimeStart != 0:
+                TimeEnd = datetime.now()
+                if TimeStart != 0:
                     tellostate.targe, posindex = wantTofly.fly(DroneVideo.worldPos)
                     #print("posindex:", posindex)
                     
@@ -207,7 +229,7 @@ class timer_thread(threading.Thread):
                         ## calculate Tspeed and Tacc 
                         ## Tspeed = (pos2-pos1)/time
                         ## Tacc  = (speed2 - speed1)/time
-                        alltime  = tellostate.TimeEnd - tellostate.TimeStart
+                        alltime  = TimeEnd - TimeStart
                         #if alltime == 0.0:
                         #    continue
 
@@ -231,7 +253,7 @@ class timer_thread(threading.Thread):
                         tellostate.Tacc   = np.array([0.,0.,0.])
 
                     
-                tellostate.TimeStart = datetime.now()
+                TimeStart = datetime.now()
                 time.sleep(0.15)
              except:
                 print("")
@@ -248,6 +270,10 @@ class timer_thread(threading.Thread):
        except:
              print("wantTofly is None")
 
+
+
+# collect tello state data for analysis
+# x, y , z axis have different speed...
 class dataCollection_thread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -266,12 +292,13 @@ class dataCollection_thread(threading.Thread):
             z = (A-0.3)*abs(math.sin(tz*t))+0.1
             tellostate.targe = np.array([x,y,z])*100
             #fnum, targe = cirfly.fly(fnum)
-            #print("targe: ", targe)
             next_call = next_call + 0.01;
             leng = next_call - time.time()
-            print("length: ", leng)
+            #print("length: ", leng)
             time.sleep(0.015)
 
+
+# detect head by SSD and draw head box
 class headtracking_thread(threading.Thread):
     def __init__(self,name):
         threading.Thread.__init__(self)
@@ -304,6 +331,9 @@ class headtracking_thread(threading.Thread):
              #print("length: ", leng)
              time.sleep(leng)
 
+
+
+# send video to udp
 class sendvideo_thread(threading.Thread):
     def __init__(self,name):
         threading.Thread.__init__(self)
@@ -355,6 +385,7 @@ class sendvideo_thread(threading.Thread):
              time.sleep(leng)
 
 
+# tracking pos (moving to)
 class postracking_thread(threading.Thread):
     def __init__(self,name):
         threading.Thread.__init__(self)

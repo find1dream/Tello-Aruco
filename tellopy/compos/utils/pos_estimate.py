@@ -51,15 +51,15 @@ class Net(torch.nn.Module):
                             nn.BatchNorm1d(n_hidden[-1]),
                             )
 
-    def forward(self, x):
-        outx = self.features_x(x[:,3:])
-        outx2 = self.predict_x_1(x[:,:3])       
+    def forward(self, inputs):
+        outx = self.features_x(inputs[:,3:])
+        outx2 = self.predict_x_1(inputs[:,:3])       
         outx += outx2
         outx = self.hidden_x_2(outx)
         outx = self.predict_x_2(outx)
         
-        outy = self.features_y(x[:,3:])
-        outy2 = self.predict_y_1(x[:,:3])       
+        outy = self.features_y(inputs[:,3:])
+        outy2 = self.predict_y_1(inputs[:,:3])       
         outy += outy2
         outy = self.hidden_y_2(outy)
         outy = self.predict_y_2(outy)
