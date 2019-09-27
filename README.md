@@ -2,7 +2,8 @@
  
 the main file is /tellopy/compos/tellofly.py
 
-for the librarys, you can install them by reading https://github.com/hanyazou/TelloPy
+the code is based on library [tellopy](https://github.com/hanyazou/TelloPy)
+
 
 my code is for my project, so it changes ofen, if you want to use some of it, the best way maybe by reading the code I wrote and try it in you own project.
 
