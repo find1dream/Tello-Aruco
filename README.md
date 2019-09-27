@@ -1,5 +1,4 @@
 # Tello-Aruco
-Videos: https://www.youtube.com/watch?v=2h3xuEerZMY
  
 the main file is /tellopy/compos/tellofly.py
 
