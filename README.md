@@ -11,7 +11,7 @@ my code is for my project, so it changes ofen, if you want to use some of it, th
 
 I hacked the library and then can use 
 
-  1.high speed mode(in theory max 10m/s)
+  1.high speed mode(in theory max 10m/s, doesn't work now)
   
   2.mvo data(speed, position)
   
