@@ -30,12 +30,12 @@ I hacked the library and then can use
   
   5.integrate https://github.com/find1dream/dronePosPlan to the project
 
-**todo**:
-
-  1.try multiple tellos
   
   
   Head recognition example.
   ![](https://github.com/find1dream/Tello-Aruco/blob/master/head%20recognition.png)
+  
+  
+  
   
   
