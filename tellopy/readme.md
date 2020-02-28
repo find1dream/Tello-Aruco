@@ -37,3 +37,35 @@ I used a glue gun to fix the camera
 Load the battery, and the red led turns on.
 ![](https://github.com/find1dream/Tello-Aruco/blob/master/tellopy/photo/IMG_4423.jpg)
 That's all for the Tello part
+
+
+## 2. Calibration for the camera
+
+
+## 3. Library installation
+1. preliminary
+```python
+sudo pip install av
+sudo pip install image
+sudo pip install opencv-contrib-python
+```
+
+2. go to the root directory, and then
+```python
+sudo sh install.sh
+```
+
+## 4. Run the libary
+```python
+python3 xxx/Tello-Aruco/tellopy/compos/tellofly.py
+```
+
+## How it works
+
+
+| Class Name | Description (What does the class do?) |
+----|---- 
+| *PlayerController* | Enable user to move player gameobject. |
+| *BackgroundScroller* | Scroll background image permanently. |
+| *ComponentExtension* | Extension of ***Component*** class. |
+| [*SingletonMonoBehaviour< T >*](https://qiita.com/okuhiiro/items/3d69c602b8538c04a479) | This class makes ***class T*** singleton in the scene. |
