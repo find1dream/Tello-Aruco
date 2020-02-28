@@ -427,9 +427,6 @@ if __name__ == '__main__':
         postracking = postracking_thread("postracking")
         postracking.start()
 
-
-        #dataCollection = dataCollection_thread()
-        #dataCollection.start()
         if tellostate.ifheadDetect == True:
             print("head tracking............")
             head_thread =  headtracking_thread("head tracking thread")
@@ -453,17 +450,13 @@ if __name__ == '__main__':
                     pass
                 else:
                    frameold = frame_pos
-                   #print(tellostate.framem,"is to show....................k")
                    if tellostate.framem is None:
                        pass
                    else:
                      # pass
                      if tellostate.ifshowvideo is True:
                          pass
-                       # frame_head = tellostate.framem #np.array(tellostate.frameA.to_image())
-                       # cv2.imshow("tensorflow based " , frame_head)
-                        #cv2.waitKey(1)
-                     #print("tensorflow")
+
                    DroneVideo.findARMarker(frameold)
                    DroneVideo.estimatePos()
                    #if tellostate.ifshowvideo is True:
@@ -487,16 +480,13 @@ if __name__ == '__main__':
                             if tellostate.tempposRecord == True:
                                 tellostate.targe = tellostate.postemp
                             targPos = copy.copy(tellostate.targe)
-                            #if tellostate.CmdDict[tellostate.modeNow] =="path":
 
                        drone_state =\
                                 [targPos[0],targPos[1],targPos[2],tellostate.Tspeed[0],tellostate.Tspeed[1],tellostate.Tspeed[1],
                                                   0,0,0,0,0,0,
                                                   round(-tellostate.Tacc[0]*100,2),round(-tellostate.Tacc[1]*100,2),-99.74]
                        estX, estY = posEsti.estimate(drone_state)
-                                #print("tellostate.Tspeed",tellostate.Tspeed,
-                                #      "tellostate.Tacce", -tellostate.Tacc)
-                                #print("estimate pos, x:",estX,"targetx",targPos[0],"y:",estY,"targety",targPos[1])
+
                        if abs(targPos[0] - estX) < 40 and abs(targPos[1] - estY) < 40:
                             targPos[0] = copy.copy(estX)
                             targPos[1] = copy.copy(estY)
@@ -506,79 +496,8 @@ if __name__ == '__main__':
                                                     DroneVideo.realAngle,targPos)
                        #print("targe now: ", targPos)
                        tellostate.drone.flytoXYZ(AdjustX, AdjustY, AdjustZ)
-                      # q = tellostate.drone.quater
-                      # euler = euler_from_quaternion(q) 
-                      # euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
-                       #print('Targe:  %f ' % (count, time.time()-start_time), end="")
-                        #print('Read a new frame %-4d, time used: %8.2fs \r' % (count, time.time()-start_time), end="")
-                       #print("targe: %0.2f,%0.2f,%0.2f "% \
-                       #      (targPos[0],targPos[1],targPos[2]),"modeNow:",
-                       #      tellostate.CmdDict[tellostate.modeNow])
-                       #print("posnow: %0.2f,%0.2f,%0.2f "% \
-                       #      (DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2]))
-                       #print("euler: ",euler)
-                      # q = tellostate.drone.quater
-                      # euler = euler_from_quaternion(q) 
-                      # euler = np.array([math.sin(euler[2]),math.sin(euler[1]),math.sin(euler[0])])
-                      # writer.writerow([DroneVideo.worldPos[0],DroneVideo.worldPos[1],DroneVideo.worldPos[2],tellostate.speedNow[0],tellostate.speedNow[1],tellostate.speedNow[2],\
-                      #                  euler[0],euler[1],euler[2],round(tellostate.drone.gyro[0]*100,2),round(tellostate.drone.gyro[1]*100,2),round(tellostate.drone.gyro[2]*100,2),\
 
-                      #                  round(-tellostate.drone.acce[1]*100,2),round(-tellostate.drone.acce[0]*100,2),round(-tellostate.drone.acce[2]*100,2),\
-                      #                  tellostate.targe[0],tellostate.targe[1],tellostate.targe[2],refspd[0],refspd[1],refspd[2],0.0,0.0,euler[2],\
-                      #                  0.0,0.0,0.0,0.0,0.0,round(-tellostate.drone.acce[2]*100,2)])
                    key = cv2.waitKey(1)
-                   if key & 0xFF == ord ('j'):
-                       tellostate.drone.down(40)
-                   elif key & 0xFF == ord ('q'):
-                       tellostate.drone.up(40)
-                   elif key & 0xFF == ord ('k'):
-                       tellostate.drone.down(0)
-                   elif key & 0xFF == ord ('a'):
-                       tellostate.flyflag = True
-                   elif key & 0xFF == ord (';'):
-                       tellostate.flyflag = False
-                   elif key & 0xFF == ord ('o'):
-                       tellostate.drone.clockwise(40)
-                   elif key & 0xFF == ord ('s'):
-                       tellostate.drone.counter_clockwise(0)
-                       tellostate.drone.forward(0)
-                       tellostate.drone.right(0)
-                   elif key & 0xFF == ord ('b'):
-                       tellostate.targe= np.array([100,100,120])
-                       
-                   elif key & 0xFF == ord ('m'):
-                       tellostate.targe= np.array([20,50,40])
-                   
-                   elif key & 0xFF == ord ('h'):
-                       tellostate.drone.takeoff()
-                       tellostate.isflying = True
-                   elif key & 0xFF == ord ('d'):
-                       tellostate.drone.land()
-                       tellostate.flyflag = False
-                       tellostate.isflying = False
-                   elif key & 0xFF == ord ('1'):
-                       tellostate.iffollow = True
-
-                   elif key & 0xFF == ord ('2'):
-                       tellostate.iffollow = False
-                   #elif key & 0xFF == ord('t'):
-                   #    cv2.imwrite (str(frameCount) + ".png", image)
-                   #test fly
-
-                  # print("limit:%d " % (autofly.SpdLimit),\
-                  #      "spd_P:%.1f "% (autofly.DroneSpeed_P),\
-                  #      "spd_D:%.1f "% (autofly.DroneSpeed_D),\
-                  #      "pos_P:%.1f "% (autofly.Dronefly_P),\
-                  #      "pos_I:%.1f "% (autofly.Dronefly_I),\
-                  #      "pos_D:%.1f "% (autofly.Dronefly_D))
-                   #print("limit: ",autofly.SpdLimit,"speed_P",\
-                   #      autofly.tellostate.droneSpeed_P,'speed_D', autofly.tellostate.droneSpeed_D ,"P",autofly.tellostate.dronefly_P\
-                   #        ,"D", autofly.tellostate.dronefly_D)
-                  # if cv2.waitKey(5) & 0xFF == ord ('q'):
-                   #---------show frame end---------------------------------#
-                   #tellostate.TimeEnd = datetime.now()
-                   #alltime  = tellostate.TimeEnd - tellostate.TimeStart
-                   #print("all time: ",int(alltime.total_seconds()*1000),"ms", " aaaall time: ",int(aalltime.total_seconds()*1000),"ms")
 
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
