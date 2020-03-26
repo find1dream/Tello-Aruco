@@ -52,8 +52,9 @@ sudo pip install opencv-contrib-python
 
 2. go to the root directory, and then
 ```python
-sudo sh install.sh
+sudo bash install.sh
 ```
+Then you can use `import tellopy` in anywhere.
 
 ## 4. Run the libary
 ```python
