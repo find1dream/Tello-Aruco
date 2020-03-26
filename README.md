@@ -37,5 +37,8 @@ I hacked the library and then can use
   
   
   
+ ## How to install
+ Refer to ![details](https://github.com/find1dream/Tello-Aruco/edit/master/tellopy/readme.md)
+  
   
   
