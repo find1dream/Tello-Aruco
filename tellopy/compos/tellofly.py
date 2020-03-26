@@ -498,6 +498,40 @@ if __name__ == '__main__':
                        tellostate.drone.flytoXYZ(AdjustX, AdjustY, AdjustZ)
 
                    key = cv2.waitKey(1)
+                   if key & 0xFF == ord ('j'):
+                        tellostate.drone.down(40)
+                    elif key & 0xFF == ord ('q'):
+                        tellostate.drone.up(40)
+                    elif key & 0xFF == ord ('k'):
+                        tellostate.drone.down(0)
+                    elif key & 0xFF == ord ('a'):
+                        tellostate.flyflag = True
+                    elif key & 0xFF == ord (';'):
+                        tellostate.flyflag = False
+                    elif key & 0xFF == ord ('o'):
+                        tellostate.drone.clockwise(40)
+                    elif key & 0xFF == ord ('s'):
+                        tellostate.drone.counter_clockwise(0)
+                        tellostate.drone.forward(0)
+                        tellostate.drone.right(0)
+                    elif key & 0xFF == ord ('b'):
+                        tellostate.targe= np.array([100,100,120])
+
+                    elif key & 0xFF == ord ('m'):
+                        tellostate.targe= np.array([20,50,40])
+
+                    elif key & 0xFF == ord ('h'):
+                        tellostate.drone.takeoff()
+                        tellostate.isflying = True
+                    elif key & 0xFF == ord ('d'):
+                        tellostate.drone.land()
+                        tellostate.flyflag = False
+                        tellostate.isflying = False
+                    elif key & 0xFF == ord ('1'):
+                        tellostate.iffollow = True
+
+                    elif key & 0xFF == ord ('2'):
+                        tellostate.iffollow = False
 
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
