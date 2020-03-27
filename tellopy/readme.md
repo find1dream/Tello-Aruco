@@ -40,7 +40,7 @@ That's all for the Tello part
 
 
 ## 2. Calibration for the camera
-Since the part is heavily depends on the hardware, so I suggest you first find out why and how to calibrate the camera on the net, and then you can refer to the code in [here]() to perform the calibration.
+Since the part is heavily depends on the hardware, so I suggest you first find out why and how to calibrate the camera on the net, and then you can refer to the code in [here](https://github.com/find1dream/Tello-Aruco/tree/master/tellopy/compos/camPara) to perform the calibration.
 
 Last you will get `.npy` and `mtx.npy` two files that will be inputted into `cv2.aruco`
 
@@ -77,7 +77,7 @@ When you see a penguin with gun, click the penguin, and push `h`, then the drone
 Since this project is heavily depends on the hardware, so there will be many `bugs` for you. The best way to use it is to understand how it works, and use some part of it in your project.
 
 ## 7. How it works
-First you can view [this video]() to see what it can do.
+First you can view [this video](https://www.youtube.com/watch?v=G9H4TvE3mVE) to see what it can do.
 ### Overview
 The system use several threads to accomplish  different tasks, and use feedback control algorithm to make the drone flies to target position.
 
